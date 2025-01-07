@@ -5,9 +5,22 @@
 
 #include <random>
 #include <thread>
+#include <chrono>
+#include <atomic>
+#include <netinet/ip.h>
+
+#include "timestamp.hh"
+
 #include "abstract_packet_queue.hh"
 #include "l4s_packet_queue.hh"
 #include "classic_packet_queue.hh"
+
+#include "abstract_l4s_scheduler.hh"
+#include "weighted_round_robin_scheduler.hh"
+
+/* Used to scale the delay diff */
+#define ALPHA_BETA_GRANULARITY 6
+
 
 /*
    DualQ Coupled AQM, Implemented as DualQ PI2 based on RFC 9332.
@@ -20,13 +33,56 @@ private:
     //It maybe better to get this in a more reliable way in the future.
     const static unsigned int PACKET_SIZE = 1504; /* default max TUN payload size */
 
+    // default max TUN payload size from link_queue.hh.
+    const static unsigned int MTU = 1504; /*  */
+
+    const unsigned int byte_limit_;
+
+    // Proportional Integral (PI) controller parameters
+
+    // Trigger update every...    
+    uint16_t t_update_ms_;
+
+    std::thread periodic_worker_ ;
+
+    /* From RFC 9332:
+        13:   alpha = 0.1 * Tupdate / RTT_max^2      % PI integral gain in Hz
+        14:   beta = 0.3 / RTT_max                   % PI proportional gain in Hz */
+
+    uint32_t alpha_;
+    uint32_t beta_;
+
+    // Coupling factor
     uint32_t k_;
-    L4SPacketQueue lq_;
-    CLASSICPacketQueue cq_;
 
+    // Target queue delay
+    uint64_t target_ns_;
 
-    // TODO: Add components of the DualQ AQM
-        // scheduler object
+    uint64_t l4s_qdelay_ns_;
+    uint64_t classic_qdelay_ns_;
+
+    uint32_t max_rtt_ms_;
+
+    // Dual queues
+    L4SPacketQueue l4s_queue_;
+    CLASSICPacketQueue classic_queue_;
+
+    const SchedulerType scheduler_type_;
+    std::unique_ptr<AbstractL4SScheduler> scheduler_;
+
+    uint32_t satur_drop_pkts_;
+
+    uint32_t pp_l_; 
+    uint32_t pp_;
+    uint32_t p_l_;
+    uint32_t p_c_;
+    uint32_t p_cl_;
+    uint32_t p_Cmax_;
+    uint32_t p_Lmax_;
+
+    bool l4s_drop_on_overload_;
+
+    std::atomic<bool> update_running_ {true};
 
 
     /*
@@ -37,24 +93,39 @@ private:
     }
     */
 
-    bool drop_early ( void );
+    void drop ( std::string reason );
 
-    void calculate_drop_prob ( void );
+    unsigned char get_ecn_bits ( QueuedPacket && p );
+
+    void mark ( QueuedPacket & p );
+
+    bool l4s_is_overloaded ( void ) { return p_cl_ >= p_Lmax_; }
+    bool classic_is_overloaded ( void ) { return p_c_ >= p_Cmax_; }
+
+    int64_t scale_delta ( uint64_t val );
+    uint32_t scale_proba ( double prob );
 
 public:
     DualQCoupledAQM( const std::string & args );
 
     void enqueue( QueuedPacket && p ) override;
-
     QueuedPacket dequeue( void ) override;
 
     bool empty( void ) const override;
 
     std::string to_string( void ) const override;
 
-    unsigned int size_bytes( void ) const override;
+    static unsigned int get_arg( const std::string & args, const std::string & name );
 
+    unsigned int size_bytes( void ) const override;
     unsigned int size_packets( void ) const override;
+
+    bool recur( AbstractDualPI2PacketQueue & queue, uint32_t likelihood );
+
+    void periodic_update ( void );
+    uint32_t calculate_base_aqm_prob ( uint64_t ref );
+
+    ~DualQCoupledAQM ( void );
 };
 
 #endif /* DUALQ_COUPLED_AQM_HH */

@@ -9,6 +9,9 @@ libpacket_a_SOURCES = packetshell.hh packetshell.cc queued_packet.hh \
                       codel_packet_queue.cc codel_packet_queue.hh \
                       pie_packet_queue.cc pie_packet_queue.hh \
                       dualq_coupled_aqm.cc dualq_coupled_aqm.hh \
+                      abstract_dualpi2_packet_queue.cc abstract_dualpi2_packet_queue.hh \
                       classic_packet_queue.cc classic_packet_queue.hh \
                       l4s_packet_queue.cc l4s_packet_queue.hh \
+                      abstract_l4s_scheduler.hh \
+                      weighted_round_robin_scheduler.cc weighted_round_robin_scheduler.hh \
                       bindworkaround.hh
