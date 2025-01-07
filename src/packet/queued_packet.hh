@@ -14,6 +14,11 @@ struct QueuedPacket
     QueuedPacket( const std::string & s_contents, uint64_t s_arrival_time )
         : arrival_time( s_arrival_time ), contents( s_contents )
     {}
+
+    uint64_t sojourn_time_in_ns ( uint64_t ref )
+    { 
+        return ref - arrival_time ;
+    }
 };
 
 #endif /* QUEUED_PACKET_HH */
