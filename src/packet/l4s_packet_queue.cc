@@ -5,24 +5,27 @@
 
 using namespace std;
 
-#define DQ_COUNT_INVALID   (uint32_t)-1
-
 L4SPacketQueue::L4SPacketQueue( const string & args )
-  : DroppingPacketQueue(args)
-{
-  /*
-  if ( qdelay_ref_ == 0 || max_burst_ == 0 ) {
-    throw runtime_error( "PIE AQM queue must have qdelay_ref and max_burst parameters" );
-  }
-   */
+  : AbstractDualPI2PacketQueue(args),
+    max_delay_thresh_us_( get_arg( args, "l4s_max_threshold" ) ),
+    min_delay_thresh_us_ ( get_arg( args, "l4s_min_threshold" ) ),
+    min_qlen_pkt_ ( get_arg( args, "l4s_min_len" ) )
+{   
+    if ( min_delay_thresh_us_ == 0 ) {
+        // Use the step function (as opposed to ramp)
+        step_ = true;
+    }
+    else step_ = false;
+        
+    if ( max_delay_thresh_us_ == 0 ) 
+        max_delay_thresh_us_ = 1200; // us
+
+    if ( min_qlen_pkt_ == 0 )
+        min_qlen_pkt_ = 1;
 }
 
 void L4SPacketQueue::enqueue( QueuedPacket && p )
 {
-  calculate_drop_prob();
-
-
-
   assert( good() );
 }
 
@@ -35,19 +38,37 @@ bool L4SPacketQueue::drop_early ()
 
 QueuedPacket L4SPacketQueue::dequeue( void )
 {
-  QueuedPacket ret = std::move( DroppingPacketQueue::dequeue () );
-  uint32_t now = timestamp();
+    // TODO: check if keep the DroppingPacketQueue ref here
+    QueuedPacket ret = std::move( DroppingPacketQueue::dequeue () );
 
-
-
-  return ret;
+    return ret;
 }
 
-void L4SPacketQueue::calculate_drop_prob( void )
+
+uint32_t L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay )
 {
-  uint64_t now = timestamp();
+    if ( size_packets() <= min_qlen_pkt_ )
+        // Do not mark packets if under min_qlen_pkt_ (default is 1)
+        return 0;
 
+    if ( step_ ) {
+        if ( qdelay >= max_delay_thresh_us_ ) {
+            return 1;
+        }
+        return 0;
+    }
+    else {
+        // Use a ramp function: 'laqm (qdelay)' of RFC 9332
+        if ( qdelay >= max_delay_thresh_us_ ) {
+            return 1;
+        }
+        
+        if ( qdelay > min_delay_thresh_us_ ) {
+            return (qdelay - min_delay_thresh_us_)/
+                ( max_delay_thresh_us_ - min_delay_thresh_us_ );
+        }
 
-
-
+        return 0;
+    }
 }
+

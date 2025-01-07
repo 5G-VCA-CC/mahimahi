@@ -5,16 +5,10 @@
 
 using namespace std;
 
-#define DQ_COUNT_INVALID   (uint32_t)-1
-
 CLASSICPacketQueue::CLASSICPacketQueue( const string & args )
-  : DroppingPacketQueue(args)
+  : AbstractDualPI2PacketQueue(args)
 {
-    /*
-    if ( qdelay_ref_ == 0 || max_burst_ == 0 ) {
-      throw runtime_error( "PIE AQM queue must have qdelay_ref and max_burst parameters" );
-    }
-     */
+  
 }
 
 void CLASSICPacketQueue::enqueue( QueuedPacket && p )
@@ -35,6 +29,7 @@ bool CLASSICPacketQueue::drop_early ()
 
 QueuedPacket CLASSICPacketQueue::dequeue( void )
 {
+    // TODO: Check if keep the DroppingPacketqueue link below
     QueuedPacket ret = std::move( DroppingPacketQueue::dequeue () );
     uint32_t now = timestamp();
 
