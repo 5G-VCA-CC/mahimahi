@@ -7,6 +7,8 @@
 #include <thread>
 #include "dropping_packet_queue.hh"
 
+/* Max value of an 32-bit integer */
+#define MAX_PROB ((uint32_t)(~((uint32_t)0)))
 
 class AbstractDualPI2PacketQueue : public DroppingPacketQueue
 {
