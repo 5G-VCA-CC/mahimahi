@@ -99,6 +99,18 @@ string DroppingPacketQueue::to_string( void ) const
     return ret;
 }
 
+QueuedPacket* DroppingPacketQueue::peek( void ) 
+{
+    if (empty()) return nullptr;
+    return &(internal_queue_.front());
+}
+
+uint64_t DroppingPacketQueue::qdelay_in_ns ( uint64_t ref ) 
+{
+    QueuedPacket* head = peek();
+    return head ? head->sojourn_time_in_ns ( ref ) : 0 ;
+}
+
 unsigned int DroppingPacketQueue::get_arg( const string & args, const string & name )
 {
     auto offset = args.find( name );
