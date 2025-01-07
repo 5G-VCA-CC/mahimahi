@@ -26,3 +26,24 @@ uint64_t timestamp( void )
 {
     return raw_timestamp() - initial_timestamp();
 }
+
+/* Same in ns */
+
+uint64_t raw_timestamp_ns( void )
+{
+    timespec ts;
+    SystemCall( "clock_gettime", clock_gettime( CLOCK_REALTIME, &ts ) );
+
+    return ts.tv_nsec + uint64_t( ts.tv_sec ) * 1000000000;
+}
+
+uint64_t initial_timestamp_ns( void )
+{
+    static uint64_t initial_value_ns = raw_timestamp_ns();
+    return initial_value_ns;
+}
+
+uint64_t timestamp_ns( void )
+{
+    return raw_timestamp_ns() - initial_timestamp_ns();
+}
