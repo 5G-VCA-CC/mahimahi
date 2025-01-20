@@ -10,6 +10,7 @@
 
 
 using namespace std;
+using namespace PollerShortNames;
 
 DualQCoupledAQM::DualQCoupledAQM( const string & args )
   : byte_limit_( get_arg( args, "bytes" ) ),
@@ -17,11 +18,12 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     l4s_queue_ ( L4SPacketQueue ( args ) ),
     classic_queue_ ( CLASSICPacketQueue ( args ) ),
     scheduler_type_ ( static_cast<SchedulerType> (get_arg( args, "sched" ))),
-    target_ns_ ( get_arg( args, "target" ) * 1000000 ),
+    target_ns_ ( get_arg( args, "target" ) * NS_PER_MS ),
     max_rtt_ms_ ( get_arg( args, "max_rtt" ) ),
     alpha_ ( get_arg( args, "alpha" ) ),
     beta_ ( get_arg( args, "beta" ) ),
-    t_update_ms_ ( get_arg( args, "tupdate" )  ),
+    t_update_ms_ ( get_arg( args, "tupdate" ) ),
+    timer_ ( Timerfd () ),
     satur_drop_pkts_ ( 0 ),
     pp_ ( 0 ),
     pp_l_ ( 0 ),
@@ -41,7 +43,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
 
     // TODO: adjust the following values!!
 
-    if ( target_ns_ == 0 ) target_ns_ = 15000000; 
+    if ( target_ns_ == 0 ) target_ns_ = 15 * NS_PER_MS; 
     if ( max_rtt_ms_ == 0 ) max_rtt_ms_ = 100;
     if ( alpha_ == 0 ) alpha_ = 100;
     if ( beta_ == 0 ) beta_ = 200;
@@ -57,12 +59,10 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     /* initialize base timestamp value */
     initial_timestamp_ns();
 
-    using clock = chrono::steady_clock;
-    uint64_t now = timestamp_ns();
-
-    
     /* Start the periodic process that updates probs*/
-    //periodic_worker_ = std::thread ( &DualQCoupledAQM::periodic_update, this );
+    set_periodic_update ();
+
+    poller_.poll( 2000 );
 }
 
 void DualQCoupledAQM::enqueue( QueuedPacket && p )
@@ -97,6 +97,8 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
 QueuedPacket DualQCoupledAQM::dequeue( void )
 {
     QueuedPacket pkt ("empty", 0);
+    uint64_t l4s_qdelay_ns;
+    uint64_t now;
 
     // TODO: if both queues are empty, call dualpi2_reset_c_protection
 
@@ -106,8 +108,13 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             pkt = l4s_queue_.dequeue ();
             
             if ( not l4s_is_overloaded() ) {
-                // pp_, pp_l, p_c_ and p_cl calculated in the periodic update function
+                // pp_,, p_c_ and p_cl calculated in the periodic update function
                 // TODO: check periodic_update call!
+
+                now = timestamp_ns();
+
+                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns ( now );
+                pp_l_ = l4s_queue_.calculate_l4s_native_prob ( l4s_qdelay_ns ); 
 
                 p_l_ = max (pp_l_, p_cl_);
 
@@ -126,7 +133,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
             }
         } 
-        else if ( dequeue_from == QueueType::Classic) { 
+        else if ( dequeue_from == QueueType::Classic ) { 
             pkt = classic_queue_.dequeue ();       
             
             if ( recur(classic_queue_, p_c_) ) {
@@ -143,8 +150,9 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         if (scheduler_type_ == SchedulerType::WRR)
             dynamic_cast<WRRScheduler*>(scheduler_.get())->apply_credit_change();
 
-        return pkt;
+        //return pkt;
     }
+    return pkt;
 }
 
 bool DualQCoupledAQM::empty( void ) const
@@ -220,25 +228,20 @@ uint32_t DualQCoupledAQM::scale_proba ( double prob )
     return static_cast<uint32_t> (prob * MAX_PROB) ;
 }
 
-void DualQCoupledAQM::periodic_update ( void ) 
+void DualQCoupledAQM::set_periodic_update ( void ) 
 {
-    using clock = chrono::steady_clock;
-    uint64_t now = timestamp_ns();
+    const timespec interval { 0, t_update_ms_ * NS_PER_MS };
+    // timer_.set_time( interval, interval );
+   
+    // poller_.add_action( Poller::Action( timer_, Direction::In, 
+    //                                     [&] () {
+    //                                         uint64_t now = timestamp_ns();
+    //                                         pp_ = calculate_base_aqm_prob ( now );
+    //                                         p_c_ = pow( pp_, 2 );
+    //                                         p_cl_ = pp_ * k_ ;
 
-    uint64_t l4s_qdelay_ns;
-
-    while (update_running_) {
-        pp_ = calculate_base_aqm_prob ( now );
-
-        l4s_qdelay_ns = l4s_queue_.qdelay_in_ns ( now );
-        pp_l_ = l4s_queue_.calculate_l4s_native_prob ( l4s_qdelay_ns ); 
-
-        p_c_ = pow( pp_, 2 );
-        p_cl_ = pp_ * k_ ;
-
-        this_thread::sleep_until ( clock::now () + chrono::milliseconds(t_update_ms_) );
-    }
-    
+    //                                         return ResultType::Continue;
+    //                                     } ) ); 
 }
 
 uint32_t DualQCoupledAQM::calculate_base_aqm_prob ( uint64_t ref ) 

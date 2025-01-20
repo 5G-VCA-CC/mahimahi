@@ -4,12 +4,13 @@
 #define DUALQ_COUPLED_AQM_HH
 
 #include <random>
-#include <thread>
+//#include <thread>
 #include <chrono>
 #include <atomic>
 #include <netinet/ip.h>
 
-#include "timestamp.hh"
+#include "poller.hh"
+#include "timerfd.hh"
 
 #include "abstract_packet_queue.hh"
 #include "l4s_packet_queue.hh"
@@ -21,6 +22,7 @@
 /* Used to scale the delay diff */
 #define ALPHA_BETA_GRANULARITY 6
 
+#define NS_PER_MS 1000000
 
 /*
    DualQ Coupled AQM, Implemented as DualQ PI2 based on RFC 9332.
@@ -43,7 +45,8 @@ private:
     // Trigger update every...    
     uint16_t t_update_ms_;
 
-    std::thread periodic_worker_ ;
+    Poller poller_ ;
+    Timerfd timer_ ;
 
     /* From RFC 9332:
         13:   alpha = 0.1 * Tupdate / RTT_max^2      % PI integral gain in Hz
@@ -122,7 +125,7 @@ public:
 
     bool recur( AbstractDualPI2PacketQueue & queue, uint32_t likelihood );
 
-    void periodic_update ( void );
+    void set_periodic_update ( void );
     uint32_t calculate_base_aqm_prob ( uint64_t ref );
 
     ~DualQCoupledAQM ( void );
