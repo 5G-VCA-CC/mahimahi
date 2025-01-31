@@ -23,7 +23,6 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     alpha_ ( get_arg( args, "alpha" ) ),
     beta_ ( get_arg( args, "beta" ) ),
     t_update_ms_ ( get_arg( args, "tupdate" ) ),
-    timer_ ( Timerfd () ),
     satur_drop_pkts_ ( 0 ),
     pp_ ( 0 ),
     pp_l_ ( 0 ),
@@ -62,7 +61,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     /* Start the periodic process that updates probs*/
     set_periodic_update ();
 
-    poller_.poll( 2000 );
+    //poller_.poll( 0 );
 }
 
 void DualQCoupledAQM::enqueue( QueuedPacket && p )
@@ -99,6 +98,9 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
     QueuedPacket pkt ("empty", 0);
     uint64_t l4s_qdelay_ns;
     uint64_t now;
+
+    // check if the periodic update function is due, return immediately if not.
+    poller_.poll( 0 );
 
     // TODO: if both queues are empty, call dualpi2_reset_c_protection
 
@@ -231,17 +233,22 @@ uint32_t DualQCoupledAQM::scale_proba ( double prob )
 void DualQCoupledAQM::set_periodic_update ( void ) 
 {
     const timespec interval { 0, t_update_ms_ * NS_PER_MS };
-    // timer_.set_time( interval, interval );
+    timer_.set_time( interval, interval );
    
-    // poller_.add_action( Poller::Action( timer_, Direction::In, 
-    //                                     [&] () {
-    //                                         uint64_t now = timestamp_ns();
-    //                                         pp_ = calculate_base_aqm_prob ( now );
-    //                                         p_c_ = pow( pp_, 2 );
-    //                                         p_cl_ = pp_ * k_ ;
+    poller_.add_action( Poller::Action( timer_, Direction::In, 
+                                        [&] () {                                         
+                                            cout << "set_periodic_update function called! " << endl;
 
-    //                                         return ResultType::Continue;
-    //                                     } ) ); 
+                                            string str = timer_.read();
+                                            //cout << "Timer read output " << str << endl;
+
+                                            uint64_t now = timestamp_ns();
+                                            pp_ = calculate_base_aqm_prob ( now );
+                                            p_c_ = pow( pp_, 2 );
+                                            p_cl_ = pp_ * k_ ;
+
+                                            return ResultType::Continue;
+                                        } ) ); 
 }
 
 uint32_t DualQCoupledAQM::calculate_base_aqm_prob ( uint64_t ref ) 
