@@ -37,7 +37,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     }
 
     if ( k_ == 0 ) k_ = 2;
-    p_Cmax_ = min(scale_proba( 1/ pow( k_, 2 ) ), MAX_PROB);
+    p_Cmax_ = min( scale_proba( 1/ pow( k_, 2 ) ), MAX_PROB );
     p_Lmax_ = MAX_PROB;
 
     // TODO: adjust the following values!!
@@ -85,10 +85,10 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     if (( ecn_bits == IPTOS_ECN_ECT1 ) ||
         ( ecn_bits == IPTOS_ECN_CE )) {
 
-        l4s_queue_.enqueue ( std::move( p ) );
+        l4s_queue_.enqueue( std::move( p ) );
 
     } else {
-        classic_queue_.enqueue ( std::move( p ) );
+        classic_queue_.enqueue( std::move( p ) );
     }
     
 }
@@ -103,20 +103,18 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
     poller_.poll( 0 );
 
     do {
-        QueuedPacket pkt ("empty", 0);
+        QueuedPacket pkt("empty", 0);
         dequeue_from = scheduler_->select_queue();
         if ( dequeue_from == QueueType::L4S ) {
-            pkt = l4s_queue_.dequeue ();
+            pkt = l4s_queue_.dequeue();
             
             if ( not l4s_is_overloaded() ) {
-                // pp_, p_c_ and p_cl calculated in the periodic update function
-                
                 now = timestamp_ns();
 
-                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns ( now );
-                pp_l_ = l4s_queue_.calculate_l4s_native_prob ( l4s_qdelay_ns ); 
+                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
+                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns ); 
 
-                p_l_ = max (pp_l_, p_cl_);
+                p_l_ = max(pp_l_, p_cl_);
 
                 if ( recur(l4s_queue_, p_l_) ) {
                     mark(pkt);
@@ -127,24 +125,24 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                     continue;
                 } 
                 
-                if ( recur(l4s_queue_, p_cl_) ) {
-                    mark(pkt);
+                if ( recur( l4s_queue_, p_cl_ ) ) {
+                    mark( pkt );
                 } 
             }
-            scheduler_update ();
+            scheduler_update();
         } 
         else if ( dequeue_from == QueueType::Classic ) { 
             pkt = classic_queue_.dequeue();       
             
             if ( recur(classic_queue_, p_c_) ) {
-                if (get_ecn_bits( std::move( pkt ) ) == IPTOS_ECN_NOT_ECT ||
+                if ( get_ecn_bits( std::move( pkt ) ) == IPTOS_ECN_NOT_ECT ||
                     classic_is_overloaded() ) {
                         drop("");
                         continue;
                 }
                 mark( pkt );
             }
-            scheduler_update ();
+            scheduler_update();
         }
         return pkt;
 
@@ -181,7 +179,7 @@ unsigned int DualQCoupledAQM::size_packets( void ) const
     return l4s_queue_.size_packets() + classic_queue_.size_packets();;
 }
 
-void DualQCoupledAQM::drop ( std::string reason )
+void DualQCoupledAQM::drop( std::string reason )
 {
     if ( reason == "saturation") {
         satur_drop_pkts_++;
@@ -191,13 +189,13 @@ void DualQCoupledAQM::drop ( std::string reason )
          
 }
 
-unsigned char DualQCoupledAQM::get_ecn_bits ( QueuedPacket && p )
+unsigned char DualQCoupledAQM::get_ecn_bits( QueuedPacket && p )
 {
     struct iphdr *ip_header = (struct iphdr *) p.contents[4];
     return ( ip_header->tos & IPTOS_ECN_MASK ) ; 
 }
 
-void DualQCoupledAQM::mark ( QueuedPacket & p )
+void DualQCoupledAQM::mark( QueuedPacket & p )
 {
     struct iphdr *ip_header = (struct iphdr *) p.contents[4];
     ip_header->tos = ( ip_header->tos & ~IPTOS_ECN_MASK ) |
@@ -214,27 +212,27 @@ bool DualQCoupledAQM::recur( AbstractDualPI2PacketQueue & queue, uint32_t likeli
 {
     uint32_t count = queue.get_recur_count() + likelihood;
     if ( count > 1) {
-        queue.set_recur_count ( count - 1 );
+        queue.set_recur_count( count - 1 );
         return true;
     }
-    queue.set_recur_count ( count );
+    queue.set_recur_count( count );
     return false;
 }
 
-int64_t DualQCoupledAQM::scale_delta ( uint64_t val )
+int64_t DualQCoupledAQM::scale_delta( uint64_t val )
 {
     return val / ((1 << ( ALPHA_BETA_GRANULARITY + 1 )) -1) ;
 }
 
-uint32_t DualQCoupledAQM::scale_proba ( double prob )
+uint32_t DualQCoupledAQM::scale_proba( double prob )
 {
     if ( prob < 0.0 || prob > 1.0 )
         throw runtime_error ("Probability out of range! Provided value: " + std::to_string(prob));
 
-    return static_cast<uint32_t> (prob * MAX_PROB) ;
+    return static_cast<uint32_t> ( prob * MAX_PROB ) ;
 }
 
-void DualQCoupledAQM::set_periodic_update ( void ) 
+void DualQCoupledAQM::set_periodic_update( void ) 
 {
     const timespec interval { 0, t_update_ms_ * NS_PER_MS };
     timer_.set_time( interval, interval );
@@ -255,20 +253,20 @@ void DualQCoupledAQM::set_periodic_update ( void )
                                         } ) ); 
 }
 
-uint32_t DualQCoupledAQM::calculate_base_aqm_prob ( uint64_t ref ) 
+uint32_t DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref ) 
 {
     /* From  RFC 9332   : dualpi2_update function
              Linux code : calculate_probability function  */
 
-    uint64_t qdelay_old = max ( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
+    uint64_t qdelay_old = max( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
 
     uint32_t new_prob;
 
     // Update the qdelays
-    l4s_qdelay_ns_ = l4s_queue_.qdelay_in_ns ( ref );
-    classic_qdelay_ns_ = classic_queue_.qdelay_in_ns ( ref );
+    l4s_qdelay_ns_ = l4s_queue_.qdelay_in_ns( ref );
+    classic_qdelay_ns_ = classic_queue_.qdelay_in_ns( ref );
 
-    uint64_t qdelay = max ( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
+    uint64_t qdelay = max( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
 
     int64_t delta = ( (int64_t)qdelay - target_ns_ ) * alpha_;
     delta += ( (int64_t)qdelay - qdelay_old ) * beta_;
