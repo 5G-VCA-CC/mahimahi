@@ -9,6 +9,7 @@
 #include "classic_packet_queue.hh"
 
 enum class QueueType {
+    NONE,
     L4S,
     Classic
 };
