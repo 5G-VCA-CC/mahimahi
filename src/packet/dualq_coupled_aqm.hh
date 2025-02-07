@@ -96,19 +96,19 @@ private:
     }
     */
 
-    void drop ( std::string reason );
+    void drop( std::string reason );
 
-    unsigned char get_ecn_bits ( QueuedPacket && p );
+    unsigned char get_ecn_bits( QueuedPacket && p );
 
-    void mark ( QueuedPacket & p );
+    void mark( QueuedPacket & p );
 
-    bool l4s_is_overloaded ( void ) { return p_cl_ >= p_Lmax_; }
+    bool l4s_is_overloaded( void ) { return p_cl_ >= p_Lmax_; }
     bool classic_is_overloaded ( void ) { return p_c_ >= p_Cmax_; }
 
-    int64_t scale_delta ( uint64_t val );
-    uint32_t scale_proba ( double prob );
+    int64_t scale_delta( uint64_t val );
+    uint32_t scale_proba( double prob );
 
-    void scheduler_update ( void );
+    void scheduler_update( void );
 
 public:
     DualQCoupledAQM( const std::string & args );
@@ -127,10 +127,10 @@ public:
 
     bool recur( AbstractDualPI2PacketQueue & queue, uint32_t likelihood );
 
-    void set_periodic_update ( void );
-    uint32_t calculate_base_aqm_prob ( uint64_t ref );
+    void set_periodic_update( void );
+    uint32_t calculate_base_aqm_prob( uint64_t ref );
 
-    ~DualQCoupledAQM ( void );
+    ~DualQCoupledAQM( void );
 };
 
 #endif /* DUALQ_COUPLED_AQM_HH */
