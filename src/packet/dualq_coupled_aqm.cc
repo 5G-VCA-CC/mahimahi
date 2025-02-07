@@ -95,24 +95,22 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
 
 QueuedPacket DualQCoupledAQM::dequeue( void )
 {
-    QueuedPacket pkt ("empty", 0);
+    QueueType dequeue_from;
     uint64_t l4s_qdelay_ns;
     uint64_t now;
 
     // check if the periodic update function is due, return immediately if not.
     poller_.poll( 0 );
 
-    // TODO: if both queues are empty, call dualpi2_reset_c_protection
-
-    while ( size_bytes() > 0 ) {
-        QueueType dequeue_from = scheduler_->select_queue();
+    do {
+        QueuedPacket pkt ("empty", 0);
+        dequeue_from = scheduler_->select_queue();
         if ( dequeue_from == QueueType::L4S ) {
             pkt = l4s_queue_.dequeue ();
             
             if ( not l4s_is_overloaded() ) {
-                // pp_,, p_c_ and p_cl calculated in the periodic update function
-                // TODO: check periodic_update call!
-
+                // pp_, p_c_ and p_cl calculated in the periodic update function
+                
                 now = timestamp_ns();
 
                 l4s_qdelay_ns = l4s_queue_.qdelay_in_ns ( now );
@@ -122,39 +120,45 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
                 if ( recur(l4s_queue_, p_l_) ) {
                     mark(pkt);
-                 }                      
+                }                      
             } else {
                 if ( recur(l4s_queue_, p_c_) ) {
                     drop("saturation");
                     continue;
-                 } 
+                } 
                 
                 if ( recur(l4s_queue_, p_cl_) ) {
                     mark(pkt);
-                 } 
-
+                } 
             }
+            scheduler_update ();
         } 
         else if ( dequeue_from == QueueType::Classic ) { 
-            pkt = classic_queue_.dequeue ();       
+            pkt = classic_queue_.dequeue();       
             
             if ( recur(classic_queue_, p_c_) ) {
-                if (get_ecn_bits ( std::move( pkt ) ) == IPTOS_ECN_NOT_ECT ||
+                if (get_ecn_bits( std::move( pkt ) ) == IPTOS_ECN_NOT_ECT ||
                     classic_is_overloaded() ) {
-                        drop ("");
+                        drop("");
                         continue;
                 }
                 mark( pkt );
             }
+            scheduler_update ();
         }
+        return pkt;
 
-        // Apply the WRR credit change 
-        if (scheduler_type_ == SchedulerType::WRR)
-            dynamic_cast<WRRScheduler*>(scheduler_.get())->apply_credit_change();
+    } while ( dequeue_from != QueueType::NONE );
 
-        //return pkt;
-    }
-    return pkt;
+    // return pkt;
+}
+
+/* This function applies any update to scheduler state needed before dequeue */
+void DualQCoupledAQM::scheduler_update( void ) 
+{
+    // Apply the WRR credit change 
+    if (scheduler_type_ == SchedulerType::WRR)
+        dynamic_cast<WRRScheduler*>(scheduler_.get())->apply_credit_change();
 }
 
 bool DualQCoupledAQM::empty( void ) const

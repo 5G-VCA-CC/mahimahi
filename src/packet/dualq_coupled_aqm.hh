@@ -108,6 +108,8 @@ private:
     int64_t scale_delta ( uint64_t val );
     uint32_t scale_proba ( double prob );
 
+    void scheduler_update ( void );
+
 public:
     DualQCoupledAQM( const std::string & args );
 
