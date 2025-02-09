@@ -12,8 +12,8 @@ class WRRScheduler : public AbstractL4SScheduler
 {
 private: 
     // From the c_protection struct of the dualpi2 linux code.
-    uint32_t credit_;
-    uint32_t credit_init_;
+    int32_t credit_;
+    int32_t credit_init_;
     unsigned char classic_weight_;
     unsigned char l4s_weight_;
 

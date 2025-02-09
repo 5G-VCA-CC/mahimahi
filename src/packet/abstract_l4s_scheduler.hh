@@ -8,6 +8,11 @@
 #include "l4s_packet_queue.hh"
 #include "classic_packet_queue.hh"
 
+// default max TUN payload size from link_queue.hh.
+// equal to PACKET_SIZE in dualq_coupled_aqm 
+
+# define MTU 1504
+
 enum class QueueType {
     NONE,
     L4S,
