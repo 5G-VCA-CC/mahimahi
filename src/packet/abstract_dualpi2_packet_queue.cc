@@ -13,3 +13,12 @@ AbstractDualPI2PacketQueue::AbstractDualPI2PacketQueue( const string & args )
   
 }
 
+// TODO: Is there a better place for this function?
+uint32_t scale_prob( double prob )
+{
+    if ( prob < 0.0 || prob > 1.0 )
+        throw runtime_error ("Probability out of range! Provided value: " + std::to_string(prob));
+
+    return static_cast<uint32_t> ( prob * MAX_PROB ) ;
+}
+
