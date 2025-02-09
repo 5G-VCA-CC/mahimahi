@@ -106,7 +106,6 @@ private:
     bool classic_is_overloaded ( void ) { return p_c_ >= p_Cmax_; }
 
     int64_t scale_delta( uint64_t val );
-    uint32_t scale_proba( double prob );
 
     void scheduler_update( void );
 

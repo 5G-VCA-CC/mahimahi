@@ -37,7 +37,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     }
 
     if ( k_ == 0 ) k_ = 2;
-    p_Cmax_ = min( scale_proba( 1/ pow( k_, 2 ) ), MAX_PROB );
+    p_Cmax_ = min( scale_prob( 1/ pow( k_, 2 ) ), MAX_PROB );
     p_Lmax_ = MAX_PROB;
 
     // TODO: adjust the following values!!
@@ -222,14 +222,6 @@ bool DualQCoupledAQM::recur( AbstractDualPI2PacketQueue & queue, uint32_t likeli
 int64_t DualQCoupledAQM::scale_delta( uint64_t val )
 {
     return val / ((1 << ( ALPHA_BETA_GRANULARITY + 1 )) -1) ;
-}
-
-uint32_t DualQCoupledAQM::scale_proba( double prob )
-{
-    if ( prob < 0.0 || prob > 1.0 )
-        throw runtime_error ("Probability out of range! Provided value: " + std::to_string(prob));
-
-    return static_cast<uint32_t> ( prob * MAX_PROB ) ;
 }
 
 void DualQCoupledAQM::set_periodic_update( void ) 
