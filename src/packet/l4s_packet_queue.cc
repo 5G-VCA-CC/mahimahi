@@ -51,23 +51,24 @@ uint32_t L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay )
         // Do not mark packets if under min_qlen_pkt_ (default is 1)
         return 0;
 
-    if ( step_ ) {
-        if ( qdelay >= max_delay_thresh_us_ ) {
-            return 1;
+    // In both the step and the ramp methods:
+    if ( qdelay >= max_delay_thresh_us_ ) {
+            return MAX_PROB;
         }
+
+    // Here, qdelay < max_delay_thresh_us_
+    
+    if ( step_ ) {
         return 0;
     }
     else {
         // Use a ramp function: 'laqm (qdelay)' of RFC 9332
-        if ( qdelay >= max_delay_thresh_us_ ) {
-            return 1;
+
+        if ( qdelay > min_delay_thresh_us_ ) {
+            return scale_prob( ( qdelay - min_delay_thresh_us_ )/
+                ( max_delay_thresh_us_ - min_delay_thresh_us_ ) );
         }
         
-        if ( qdelay > min_delay_thresh_us_ ) {
-            return (qdelay - min_delay_thresh_us_)/
-                ( max_delay_thresh_us_ - min_delay_thresh_us_ );
-        }
-
         return 0;
     }
 }
