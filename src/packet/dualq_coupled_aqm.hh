@@ -35,9 +35,6 @@ private:
     //It maybe better to get this in a more reliable way in the future.
     const static unsigned int PACKET_SIZE = 1504; /* default max TUN payload size */
 
-    // default max TUN payload size from link_queue.hh.
-    const static unsigned int MTU = 1504; /*  */
-
     const unsigned int byte_limit_;
 
     // Proportional Integral (PI) controller parameters
