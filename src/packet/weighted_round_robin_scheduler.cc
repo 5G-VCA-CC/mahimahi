@@ -25,18 +25,18 @@ QueueType WRRScheduler::select_queue ( )
     if ( not l4s_queue_.empty() && (classic_queue_.empty() || credit_ <= 0) ) {
         // The L4S queue can be dequeued.
         // Increase the credit using classic_weight_ if classic queue non-empty
-        QueuedPacket* next_pkt = l4s_queue_.peek(); 
+        QueuedPacket& next_pkt = l4s_queue_.peek(); 
         credit_change_ = not classic_queue_.empty() ? 
-            classic_weight_ * next_pkt->contents.size() : 0 ;
+            classic_weight_ * next_pkt.contents.size() : 0 ;
         
         return QueueType::L4S;
     }
     else if (not classic_queue_.empty()) {
         /* The classic queue can be dequeued.
            Decrease the credit using l4s_weight_ if L4S queue non-empty */ 
-        QueuedPacket* next_pkt = classic_queue_.peek(); 
+        QueuedPacket& next_pkt = classic_queue_.peek(); 
         credit_change_ = not l4s_queue_.empty() ? 
-            (-1) * l4s_weight_ * next_pkt->contents.size() : 0 ;
+            (-1) * l4s_weight_ * next_pkt.contents.size() : 0 ;
         
         return QueueType::Classic;
     }
