@@ -80,7 +80,7 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     p.enqueue_time = timestamp_ns();
 
     // Packet classifier
-    unsigned char ecn_bits = get_ecn_bits ( std::move( p ) );
+    unsigned char ecn_bits = get_ecn_bits( p );
 
     if (( ecn_bits == IPTOS_ECN_ECT1 ) ||
         ( ecn_bits == IPTOS_ECN_CE )) {
@@ -135,7 +135,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             pkt = classic_queue_.dequeue();       
             
             if ( recur(classic_queue_, p_c_) ) {
-                if ( get_ecn_bits( std::move( pkt ) ) == IPTOS_ECN_NOT_ECT ||
+                if ( get_ecn_bits( pkt ) == IPTOS_ECN_NOT_ECT ||
                     classic_is_overloaded() ) {
                         drop("");
                         continue;
@@ -189,7 +189,7 @@ void DualQCoupledAQM::drop( std::string reason )
          
 }
 
-unsigned char DualQCoupledAQM::get_ecn_bits( QueuedPacket && p )
+unsigned char DualQCoupledAQM::get_ecn_bits( QueuedPacket & p )
 {
     struct iphdr *ip_header = (struct iphdr *) p.contents[4];
     return ( ip_header->tos & IPTOS_ECN_MASK ) ; 
