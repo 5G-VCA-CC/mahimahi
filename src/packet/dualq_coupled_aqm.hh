@@ -95,7 +95,7 @@ private:
 
     void drop( std::string reason );
 
-    unsigned char get_ecn_bits( QueuedPacket && p );
+    unsigned char get_ecn_bits( QueuedPacket & p );
 
     void mark( QueuedPacket & p );
 
