@@ -77,7 +77,7 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     }
 
     // Record the packet's timestamp to calculate the sojourn time. 
-    // Here, I am using the existing p.arrival_time, similar to CoDel.
+    p.enqueue_time = timestamp_ns();
 
     // Packet classifier
     unsigned char ecn_bits = get_ecn_bits ( std::move( p ) );
