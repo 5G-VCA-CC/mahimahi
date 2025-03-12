@@ -9,6 +9,9 @@
 // #include <random>
 // #include <thread>
 
+#include <random>
+#include <cstdint>
+
 #include "abstract_packet_queue.hh"
 
 /* Max value of an 32-bit integer */
@@ -22,8 +25,6 @@ private:
     std::queue<QueuedPacket> internal_queue_ {};
 
     virtual const std::string & type( void ) const = 0;
-
-    uint64_t recur_count_ = 0;
 
 protected:
     
@@ -40,11 +41,8 @@ public:
     unsigned int size_bytes( void ) const override;
     unsigned int size_packets( void ) const override;
 
-    uint64_t get_recur_count ( void ) { return recur_count_; } 
-    void set_recur_count ( uint64_t val ) { recur_count_ = val; }
-
     QueuedPacket& peek ( void );
-    uint64_t qdelay_in_ns ( uint64_t ref );       
+    uint64_t qdelay_in_ms ( uint64_t ref );       
 };
 
 
@@ -52,5 +50,21 @@ public:
 uint32_t scale_prob( double prob );
 unsigned int get_arg( const std::string & args, const std::string & name );
 void print_ipv4_header( QueuedPacket & p ); 
+
+inline uint32_t rand32() 
+{
+    static std::mt19937 rng{std::random_device{}()}; // 32-bit Mersenne Twister
+    return rng(); // Produces a 32-bit random value in [0, 2^32-1]
+}
+
+inline bool random_roll(uint32_t prob)
+{
+    return rand32() <= prob;
+}
+
+inline bool random_squared_roll(uint32_t prob)
+{
+    return random_roll(prob) && random_roll(prob);
+}
 
 #endif /* ABSTRACT_DUALPI2_PACKET_QUEUE_HH */
