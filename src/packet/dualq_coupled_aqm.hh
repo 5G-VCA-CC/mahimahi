@@ -25,6 +25,7 @@
 
 #define ALPHA_BETA_SCALING (ALPHA_BETA_SHIFT - ALPHA_BETA_GRANULARITY)
 
+#define MS_PER_S  1000
 #define NS_PER_MS 1000000
 #define NS_PER_S  1000000000
 
@@ -57,10 +58,10 @@ private:
     uint32_t k_;
 
     // Target queue delay
-    uint64_t target_ns_;
+    uint64_t target_ms_;
 
-    uint64_t l4s_qdelay_ns_;
-    uint64_t classic_qdelay_ns_;
+    uint64_t l4s_qdelay_ms_;
+    uint64_t classic_qdelay_ms_;
 
     uint32_t max_rtt_ms_;
 
@@ -76,7 +77,7 @@ private:
     uint32_t pp_l_; 
     uint32_t pp_;
     uint32_t p_l_;
-    uint32_t p_c_;
+    uint64_t p_c_;
     uint32_t p_cl_;
     uint32_t p_Cmax_;
     uint32_t p_Lmax_;
@@ -122,8 +123,6 @@ public:
 
     unsigned int size_bytes( void ) const override;
     unsigned int size_packets( void ) const override;
-
-    bool recur( AbstractDualPI2PacketQueue & queue, uint32_t likelihood );
 
     void set_periodic_update( void );
     uint32_t calculate_base_aqm_prob( uint64_t ref );
