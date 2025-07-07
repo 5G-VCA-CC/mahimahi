@@ -50,7 +50,9 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     p_Cmax_ = min( 1/ pow( k_, 2 ) , 1.0 );
     p_Lmax_ = 1.0;
 
-    if ( target_ms_ == 0 ) target_ms_ = 15; 
+    if ( target_ms_ == 0 ) target_ms_ = 5;
+    cout << "target = " << target_ms_ << endl;
+    
     if ( max_rtt_ms_ == 0 ) max_rtt_ms_ = 100;
     if ( t_update_ms_ == 0 ) t_update_ms_ = 16; // RFC 9332: Tupdate = min(target, RTT_max/3)
     
