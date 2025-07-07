@@ -13,15 +13,15 @@ using namespace std;
 
 void AbstractDualPI2PacketQueue::enqueue( QueuedPacket && p )
 {
-    std::cout << "> In enqueue. Packet of size "<< p.contents.size()  << " to enqueue: "  <<  std::endl;
+    //std::cout << "> In enqueue. Packet of size "<< p.contents.size()  << " to enqueue: "  <<  std::endl;
     print_ipv4_header( p ) ;
 
     queue_size_in_bytes_ += p.contents.size();
     queue_size_in_packets_++;
     internal_queue_.emplace( std::move( p ) );
     
-    std::cout << "> In enqueue. Queue size is " << size_bytes() << " bytes, or " << size_packets() 
-    << " packets." <<  std::endl;
+    //std::cout << "> In enqueue. Queue size is " << size_bytes() << " bytes, or " << size_packets() 
+    //<< " packets." <<  std::endl;
 }
 
 QueuedPacket AbstractDualPI2PacketQueue::dequeue( void )
