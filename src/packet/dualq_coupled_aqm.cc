@@ -52,7 +52,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
 
     if ( target_ms_ == 0 ) target_ms_ = 5;
     cout << "target = " << target_ms_ << endl;
-    
+
     if ( max_rtt_ms_ == 0 ) max_rtt_ms_ = 100;
     if ( t_update_ms_ == 0 ) t_update_ms_ = 16; // RFC 9332: Tupdate = min(target, RTT_max/3)
     
@@ -107,7 +107,7 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     // Packet classifier
     unsigned char ecn_bits = get_ecn_bits( p );
 
-    //std::cout << "> ECN bits: " << std::to_string(ecn_bits) << std::endl;
+    std::cout << "> ECN bits: " << std::to_string(ecn_bits) << std::endl;
 
     if (( ecn_bits == IPTOS_ECN_ECT1 ) ||
         ( ecn_bits == IPTOS_ECN_CE )) {
@@ -138,10 +138,11 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         poller_.poll( 0 );
 
         QueuedPacket pkt("empty", 0);
+        std::cout << "selecting queue..." << std::endl;
         dequeue_from = scheduler_->select_queue();
 
         if ( dequeue_from == QueueType::L4S ) {
-            //std::cout << "> Scheduler selects L4S..." << std::endl;
+            std::cout << "> Scheduler selects L4S..." << std::endl;
             pkt = l4s_queue_.dequeue();
             
             if ( not l4s_is_overloaded() ) {
@@ -177,7 +178,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             scheduler_update();
         } 
         else if ( dequeue_from == QueueType::Classic ) { 
-            //std::cout << "> Scheduler selects Classic..." << std::endl;
+            std::cout << "> Scheduler selects Classic..." << std::endl;
             pkt = classic_queue_.dequeue();       
             
             if ( recur(classic_queue_, p_c_) ) {
@@ -192,7 +193,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 }
                 if ( can_mark_or_drop() )
                 {
-                    //std::cout << " ---- MARKING !! " << std::endl;
+                    std::cout << " ---- MARKING !! " << std::endl;
                     mark( pkt );
                 }
             }

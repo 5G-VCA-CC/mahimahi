@@ -20,7 +20,7 @@ QueueType WRRScheduler::select_queue ( )
         reset_credit();
         return QueueType::NONE;
     }
-
+    
     credit_change_ = 0;
 
     if ( not l4s_queue_.empty() && (classic_queue_.empty() || credit_ <= 0) ) {
