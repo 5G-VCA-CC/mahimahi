@@ -148,7 +148,7 @@ void print_ipv4_header( QueuedPacket & p )
 }
 
 /* Calculate_ip_checksum function, borrowed from:
-   https://github.com/prateshg/ABC-NSDI2020/mahimahi/src/packet/cellular_packet_queue.hh*/
+   https://github.com/prateshg/ABC-NSDI2020/blob/main/mahimahi/src/packet/cellular_packet_queue.hh*/
 
 /* set ip checksum of a given ip header*/
 /* Compute checksum for count bytes starting at addr, using one's complement of one's complement sum*/
