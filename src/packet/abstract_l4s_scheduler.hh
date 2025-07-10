@@ -20,7 +20,6 @@ enum class QueueType {
 };
 
 enum class SchedulerType {
-    NONE,
     WRR,
     TS_FIFO
 };
