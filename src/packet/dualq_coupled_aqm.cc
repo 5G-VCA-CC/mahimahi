@@ -63,7 +63,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     if ( beta_ == 0 ) beta_ = 0.0032;
     
 
-    if (scheduler_type_ == SchedulerType::NONE || scheduler_type_ == SchedulerType::WRR) {
+    if (scheduler_type_ == SchedulerType::WRR) {
         scheduler_ = std::unique_ptr<WRRScheduler>( new WRRScheduler(l4s_queue_, classic_queue_) );
     }
 
