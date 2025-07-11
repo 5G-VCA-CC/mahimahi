@@ -135,7 +135,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         //std::cout << "> Polling (start of dequeue iteration)" << std::endl;
         poller_.poll( 0 );
 
-        QueuedPacket pkt("empty", 0);
+        QueuedPacket pkt("", 0);
         dequeue_from = scheduler_->select_queue();
 
         if ( dequeue_from == QueueType::L4S ) {
