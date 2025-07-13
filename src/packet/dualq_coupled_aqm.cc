@@ -272,6 +272,8 @@ void DualQCoupledAQM::mark( QueuedPacket & p )
 
     std::cout << "-- New tos: " << std::to_string(ip_header->tos) << std::endl;
 
+    // Zero out the checksum field before recalculating
+    ip_header->check = 0;
     ip_header->check = calculate_ip_checksum ((unsigned short*) ip_header, ip_header->ihl << 2);
 
     struct iphdr *ip_header2 = (struct iphdr *) &p.contents[4];
