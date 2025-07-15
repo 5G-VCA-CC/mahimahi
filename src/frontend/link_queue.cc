@@ -85,7 +85,27 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
 
     /* create graphs if called for */
     if ( graph_throughput ) {
-        throughput_graph_.reset( new BinnedLiveGraph( link_name + " [" + filename + "]",
+        // Check if this is a DualQCoupledAQM using dynamic_cast
+        DualQCoupledAQM* dualpi2_queue = dynamic_cast<DualQCoupledAQM*>(packet_queue_.get());
+
+        if ( dualpi2_queue ) {
+            // For dualpi2, add two throughput lines:
+            // index 3: Classic queue delay (orange)
+            // index 4: L4S queue delay (light blue)
+            throughput_graph_.reset( new BinnedLiveGraph( link_name + " [" + filename + "]",
+                                                      { make_tuple( 1.0, 0.0, 0.0, 0.25, true ),
+                                                        make_tuple( 0.0, 0.0, 0.4, 1.0, false ),
+                                                        make_tuple( 1.0, 0.0, 0.0, 0.5, false ), 
+                                                        make_tuple( 1.0, 0.5, 0.0, 1.0, false ),   // Classic - orange 
+                                                        make_tuple( 0.4, 0.7, 1.0, 1.0, false )},  // L4S - light blue
+                                                      "throughput (Mbps)",
+                                                      8.0 / 1000000.0,
+                                                      true,
+                                                      500,
+                                                      [] ( int, int & x ) { x = 0; } ) );
+
+        } else {
+            throughput_graph_.reset( new BinnedLiveGraph( link_name + " [" + filename + "]",
                                                       { make_tuple( 1.0, 0.0, 0.0, 0.25, true ),
                                                         make_tuple( 0.0, 0.0, 0.4, 1.0, false ),
                                                         make_tuple( 1.0, 0.0, 0.0, 0.5, false ) },
@@ -94,6 +114,8 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
                                                       true,
                                                       500,
                                                       [] ( int, int & x ) { x = 0; } ) );
+        }
+
     }
 
     if ( graph_delay ) {
@@ -101,9 +123,9 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
         DualQCoupledAQM* dualpi2_queue = dynamic_cast<DualQCoupledAQM*>(packet_queue_.get());
         
         if ( dualpi2_queue ) {
-            // For dualpi2, create a graph with three lines:
-            // 0: Classic queue delay (orange)
-            // 1: L4S queue delay (light blue)
+            // For dualpi2, create a graph with two lines:
+            // index 0: Classic queue delay (orange)
+            // index 1: L4S queue delay (light blue)
             delay_graph_.reset( new BinnedLiveGraph( link_name + " delay [" + filename + "]",
                                                      { make_tuple( 1.0, 0.5, 0.0, 1.0, false ),   // Classic - orange 
                                                        make_tuple( 0.4, 0.7, 1.0, 1.0, false ) }, // L4S - light blue
@@ -165,7 +187,20 @@ void LinkQueue::record_departure( const uint64_t departure_time, const QueuedPac
 
     /* meter the delivery */
     if ( throughput_graph_ ) {
+        // Check if this is a DualQCoupledAQM using dynamic_cast
+        DualQCoupledAQM* dualpi2_queue = dynamic_cast<DualQCoupledAQM*>(packet_queue_.get());
+        
+        // First, record the overall throughput
         throughput_graph_->add_value_now( 2, packet.contents.size() );
+        
+        if ( dualpi2_queue ) {
+            // Then, record the individual queue throughputs
+            if ( is_l4s_packet( packet ) ) {
+                throughput_graph_->add_value_now( 4, packet.contents.size() );  // L4S delay - index 1 (light blue)
+            } else {
+                throughput_graph_->add_value_now( 3, packet.contents.size() );  // Classic delay - index 0 (orange)
+            }
+        }
     }
 
     if ( delay_graph_ ) {
