@@ -2,12 +2,14 @@
 
 #include <limits>
 #include <cassert>
+#include <netinet/ip.h>
 
 #include "link_queue.hh"
 #include "timestamp.hh"
 #include "util.hh"
 #include "ezio.hh"
 #include "abstract_packet_queue.hh"
+#include "dualq_coupled_aqm.hh"
 
 using namespace std;
 
@@ -95,11 +97,27 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
     }
 
     if ( graph_delay ) {
-        delay_graph_.reset( new BinnedLiveGraph( link_name + " delay [" + filename + "]",
-                                                 { make_tuple( 0.0, 0.25, 0.0, 1.0, false ) },
-                                                 "queueing delay (ms)",
-                                                 1, false, 250,
-                                                 [] ( int, int & x ) { x = -1; } ) );
+        // Check if this is a DualQCoupledAQM using dynamic_cast
+        DualQCoupledAQM* dualpi2_queue = dynamic_cast<DualQCoupledAQM*>(packet_queue_.get());
+        
+        if ( dualpi2_queue ) {
+            // For dualpi2, create a graph with three lines:
+            // 0: Classic queue delay (orange)
+            // 1: L4S queue delay (light blue)
+            delay_graph_.reset( new BinnedLiveGraph( link_name + " delay [" + filename + "]",
+                                                     { make_tuple( 1.0, 0.5, 0.0, 1.0, false ),   // Classic - orange 
+                                                       make_tuple( 0.4, 0.7, 1.0, 1.0, false ) }, // L4S - light blue
+                                                     "queueing delay (ms)",
+                                                     1, false, 250,
+                                                     [] ( int, int & x ) { x = -1; } ) );
+        } else {
+            // For non-dualpi2 queues, use single delay line (green)
+            delay_graph_.reset( new BinnedLiveGraph( link_name + " delay [" + filename + "]",
+                                                     { make_tuple( 0.0, 0.25, 0.0, 1.0, false ) },
+                                                     "queueing delay (ms)",
+                                                     1, false, 250,
+                                                     [] ( int, int & x ) { x = -1; } ) );
+        }
     }
 }
 
@@ -151,7 +169,24 @@ void LinkQueue::record_departure( const uint64_t departure_time, const QueuedPac
     }
 
     if ( delay_graph_ ) {
-        delay_graph_->set_max_value_now( 0, departure_time - packet.arrival_time );
+        uint64_t packet_qdelay = departure_time - packet.arrival_time;
+        
+        // Check if this is a DualQCoupledAQM using dynamic_cast
+        DualQCoupledAQM* dualpi2_queue = dynamic_cast<DualQCoupledAQM*>(packet_queue_.get());
+        
+        if ( dualpi2_queue ) {            
+            // Record queue delay to the appropriate individual queue
+            // TODO: move the is_l4s_packet check to the QueuedPAcket class to be used in enqueue as well
+
+            if ( is_l4s_packet( packet ) ) {
+                delay_graph_->set_max_value_now( 1, packet_qdelay );  // L4S delay - index 1 (light blue)
+            } else {
+                delay_graph_->set_max_value_now( 0, packet_qdelay );  // Classic delay - index 0 (orange)
+            }
+        } else {
+            // For non-dualpi2 queues, record only overall delay (green, same color as dualpi2 overall)
+            delay_graph_->set_max_value_now( 0, packet_qdelay );
+        }
     }    
 }
 
@@ -276,4 +311,21 @@ unsigned int LinkQueue::wait_time( void )
 bool LinkQueue::pending_output( void ) const
 {
     return not output_queue_.empty();
+}
+
+bool LinkQueue::is_l4s_packet( const QueuedPacket & packet ) const 
+{
+    // Check if packet is large enough to contain IP header (4 byte offset + 20 byte IP header)
+    if ( packet.contents.size() < 24 ) {
+        return false;
+    }
+    
+    // Get IP header (offset 4, same as in dualpi2 code)
+    struct iphdr *ip_header = (struct iphdr *) &packet.contents[4];
+    
+    // Extract ECN bits from TOS field
+    unsigned char ecn_bits = ip_header->tos & IPTOS_ECN_MASK;
+    
+    // L4S packets have ECT(1) or CE markings
+    return (ecn_bits == IPTOS_ECN_ECT1) || (ecn_bits == IPTOS_ECN_CE);
 }
