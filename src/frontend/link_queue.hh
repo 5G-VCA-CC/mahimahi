@@ -45,6 +45,9 @@ private:
 
     void rationalize( const uint64_t now );
     void dequeue_packet( void );
+    
+    // Helper function to determine if a packet is L4S based on ECN bits
+    bool is_l4s_packet( const QueuedPacket & packet ) const;
 
 public:
     LinkQueue( const std::string & link_name, const std::string & filename, const std::string & logfile,
