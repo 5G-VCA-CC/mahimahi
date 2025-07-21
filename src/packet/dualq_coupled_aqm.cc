@@ -140,7 +140,9 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
         if ( dequeue_from == QueueType::L4S ) {
             std::cout << "> Scheduler selects L4S..." << std::endl;
+
             pkt = l4s_queue_.dequeue();
+            std::cout << pkt.contents.size() << std::endl;
             
             if ( not l4s_is_overloaded() ) {
                 now = timestamp();
@@ -160,7 +162,10 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 if ( recur(l4s_queue_, p_c_) ) {
                     if ( can_mark_or_drop() ) 
                     {
+
                         drop("saturation");
+                        std::cout << "l4s drop" << std::endl;
+                        std::cout << pkt.contents.size() << std::endl;
                         continue;
                     }
                 } 
@@ -176,7 +181,8 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         } 
         else if ( dequeue_from == QueueType::Classic ) { 
             std::cout << "> Scheduler selects Classic..." << std::endl;
-            pkt = classic_queue_.dequeue();       
+            pkt = classic_queue_.dequeue();   
+            std::cout << pkt.contents.size() << std::endl;    
             
             if ( recur(classic_queue_, p_c_) ) {
                 if ( get_ecn_bits( pkt ) == IPTOS_ECN_NOT_ECT ||
@@ -185,6 +191,8 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                         {
                             std::cout << " ---- DROPPING !! " << std::endl;
                             drop("");
+                            std::cout << "classic drop" << std::endl;
+                            std::cout << pkt.contents.size() << std::endl;
                             continue;
                         }
                 }
