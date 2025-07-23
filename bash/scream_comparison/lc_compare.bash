@@ -30,6 +30,9 @@ echo "  Classic: $SCREAM_BIN_DIR/scream_bw_test_rx 10.0.0.2 $PORT_CLASSIC"
 echo
 read -p "Press Enter to continue once receivers are started..."
 
+# $HOME/research/l4s/scream/bin/scream_bw_test_rx 10.0.0.2 8081
+# $HOME/research/l4s/scream/bin/scream_bw_test_rx 10.0.0.2 8082
+
 # === Run test and graph
 run_test () {
   local QUEUE=$1
