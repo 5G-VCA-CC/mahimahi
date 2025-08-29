@@ -357,23 +357,23 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
     cout << ">> [new] l4s_qdelay_ms = " << std::to_string(l4s_qdelay_ms_) << endl;
     cout << ">> [new] classic_qdelay_ms = " << std::to_string(classic_qdelay_ms_) << endl;
 
-    double new_prob = (static_cast<double>(qdelay) - target_ms_) * alpha_ 
-                    + (static_cast<double>(qdelay) - qdelay_old) * beta_;
-    
-    cout << ">> new_prob = " << std::to_string(new_prob) << endl;
+    double new_pp = (static_cast<double>(qdelay) - target_ms_) * alpha_ +
+                    (static_cast<double>(qdelay) - qdelay_old) * beta_  + pp_;
 
-    if ( new_prob > 1.0 ) {
+    // cout << ">> new_prob = " << std::to_string(new_prob) << endl;
+
+    if ( new_pp > 1.0 ) {
         // prevent overflow
-        new_prob = 1.0;
+        new_pp = 1.0;
     }
-    else if ( new_prob < 0.0) {
+    else if ( new_pp < 0.0) {
         // prevent underflow
-        new_prob = 0.0;
+        new_pp = 0.0;
     }
 
     // TODO: check the capping of p' if no drop on overload
 
-    return new_prob;
+    return new_pp;
 }
 
 // unsigned int DualQCoupledAQM::get_arg( const string & args, const string & name )
