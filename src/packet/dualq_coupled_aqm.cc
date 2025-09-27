@@ -47,8 +47,12 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     }
 
     //if ( k_ == 0 ) k_ = 2;
-    p_Cmax_ = min( 1/ pow( k_, 2 ) , 1.0 );
-    p_Lmax_ = 1.0;
+
+    // For equivalence with the Linux kernel code
+    // p_Cmax_ = min( 1/ pow( k_, 2 ) , 1.0 );
+    // p_Lmax_ = 1.0;
+
+    max_prob = 1.0;
 
     if ( target_ms_ == 0 ) target_ms_ = 15; 
     if ( max_rtt_ms_ == 0 ) max_rtt_ms_ = 100;
@@ -135,14 +139,14 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         std::cout << "> Polling (start of dequeue iteration)" << std::endl;
         poller_.poll( 0 );
 
-        QueuedPacket pkt("empty", 0);
+        QueuedPacket pkt("", 0);
         dequeue_from = scheduler_->select_queue();
 
         if ( dequeue_from == QueueType::L4S ) {
             std::cout << "> Scheduler selects L4S..." << std::endl;
             pkt = l4s_queue_.dequeue();
             
-            if ( not l4s_is_overloaded() ) {
+            if ( not is_overloaded() ) {
                 now = timestamp();
 
                 l4s_qdelay_ms = l4s_queue_.qdelay_in_ms( now );
@@ -180,7 +184,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             
             if ( recur(classic_queue_, p_c_) ) {
                 if ( get_ecn_bits( pkt ) == IPTOS_ECN_NOT_ECT ||
-                    classic_is_overloaded() ) {
+                    is_overloaded() ) {
                         if ( can_mark_or_drop() )
                         {
                             std::cout << " ---- DROPPING !! " << std::endl;
