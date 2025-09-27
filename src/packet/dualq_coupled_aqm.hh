@@ -78,9 +78,12 @@ private:
     double p_l_;
     double p_c_;
     double p_cl_;
-    double p_Cmax_;
-    double p_Lmax_;
 
+    // For equivalence with the Linux kernel code
+    // double p_Cmax_;
+    // double p_Lmax_;
+
+    double max_prob;
     bool l4s_drop_on_overload_;
 
     std::atomic<bool> update_running_ {true};
@@ -101,9 +104,11 @@ private:
 
     void mark( QueuedPacket & p );
 
-    bool l4s_is_overloaded( void ) { return p_cl_ >= p_Lmax_; }
-    bool classic_is_overloaded ( void ) { return p_c_ >= p_Cmax_; }
+    // For equivalence with the Linux code
+    // bool l4s_is_overloaded( void ) { return p_cl_ >= p_Lmax_; }
+    // bool classic_is_overloaded ( void ) { return p_c_ >= p_Cmax_; }
 
+    bool is_overloaded( void ) { return p_cl_ > max_prob; }
     void scheduler_update( void );
 
 public:
