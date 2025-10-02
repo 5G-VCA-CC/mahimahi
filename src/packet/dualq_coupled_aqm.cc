@@ -24,7 +24,9 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     alpha_ ( get_arg( args, "alpha" ) ),
     beta_ ( get_arg( args, "beta" ) ),
     t_update_ms_ ( get_arg( args, "tupdate" ) ),
-    satur_drop_pkts_ ( 0 ),
+    overload_drop_pkts_ ( 0 ),
+    overflow_drop_pkts_ ( 0 ),
+    not_ect_drop_pkts_ ( 0 ),
     pp_ ( 0 ),
     pp_l_ ( 0 ),
     p_l_ ( 0 ),
@@ -98,8 +100,8 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     poller_.poll( 0 );
 
     if ( size_bytes() + MTU > byte_limit_) {
-        std::cout << "> Drop due to saturationnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn!! " << std::endl;
-        drop ("saturation");
+        std::cout << "> Drop due to overflow!! " << std::endl;
+        drop (DropReason::Overflow);
         return;
     }
 
@@ -164,7 +166,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 if ( recur(l4s_queue_, p_c_) ) {
                     if ( can_mark_or_drop() ) 
                     {
-                        drop("saturation");
+                        drop(DropReason::Overload);
                         continue;
                     }
                 } 
@@ -188,7 +190,8 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                         if ( can_mark_or_drop() )
                         {
                             std::cout << " ---- DROPPING !! " << std::endl;
-                            drop("");
+                            if (is_overloaded()) drop(DropReason::Overload);
+                            else drop(DropReason::NotECT);
                             continue;
                         }
                 }
@@ -248,14 +251,19 @@ bool DualQCoupledAQM::can_mark_or_drop( void )
     return true;
 }
 
-void DualQCoupledAQM::drop( std::string reason )
+void DualQCoupledAQM::drop( DropReason reason )
 {
-    if ( reason == "saturation") {
-        satur_drop_pkts_++;
-    } else if ( reason == "") {
-
+    switch ( reason ) {
+        case DropReason::Overflow:
+            overflow_drop_pkts_++;
+            break;
+        case DropReason::Overload:
+            overload_drop_pkts_++;
+            break;
+        case DropReason::NotECT:
+            not_ect_drop_pkts_++;
+            break;
     }
-         
 }
 
 unsigned char DualQCoupledAQM::get_ecn_bits( QueuedPacket & p )

@@ -32,6 +32,12 @@
    DualQ Coupled AQM, Implemented as DualQ PI2 based on RFC 9332.
 */
 
+enum class DropReason {
+    Overload, // a.k.a. saturation
+    Overflow,  // exceeding queue limits
+    NotECT
+};
+
 class DualQCoupledAQM : public AbstractPacketQueue
 {
 private:
@@ -71,7 +77,9 @@ private:
     const SchedulerType scheduler_type_;
     std::unique_ptr<AbstractL4SScheduler> scheduler_;
 
-    uint32_t satur_drop_pkts_;
+    uint32_t overload_drop_pkts_;
+    uint32_t overflow_drop_pkts_;
+    uint32_t not_ect_drop_pkts_;
 
     double pp_l_; 
     double pp_;
@@ -98,7 +106,7 @@ private:
     */
 
     bool can_mark_or_drop( void );
-    void drop( std::string reason );
+    void drop( DropReason reason );
 
     unsigned char get_ecn_bits( QueuedPacket & p );
 
