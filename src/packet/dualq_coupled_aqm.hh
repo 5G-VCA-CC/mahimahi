@@ -134,7 +134,8 @@ public:
     unsigned int size_bytes( void ) const override;
     unsigned int size_packets( void ) const override;
 
-    bool recur( AbstractDualPI2PacketQueue & queue, double likelihood );
+    //bool recur( AbstractDualPI2PacketQueue & queue, double likelihood );
+    bool roll( double prob );
 
     void set_periodic_update( void );
     double calculate_base_aqm_prob( uint64_t ref );

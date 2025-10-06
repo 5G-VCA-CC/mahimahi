@@ -156,22 +156,22 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
                 p_l_ = max(pp_l_, p_cl_);
 
-                if ( recur(l4s_queue_, p_l_) ) {
+                if ( roll( p_l_) ) {
                     if ( can_mark_or_drop() )
                     {
                         mark( pkt );
                     }
                 }                      
             } else {
-                if ( recur(l4s_queue_, p_c_) ) {
+                if ( roll( p_c_) ) {
                     if ( can_mark_or_drop() ) 
                     {
                         drop(DropReason::Overload);
                         continue;
                     }
                 } 
-                
-                if ( recur( l4s_queue_, p_cl_ ) ) {
+
+                if ( roll( p_cl_ ) ) {
                     if ( can_mark_or_drop() )
                     {
                         mark( pkt );
@@ -184,7 +184,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             std::cout << "> Scheduler selects Classic..." << std::endl;
             pkt = classic_queue_.dequeue();       
             
-            if ( recur(classic_queue_, p_c_) ) {
+            if ( roll( p_c_) ) {
                 if ( get_ecn_bits( pkt ) == IPTOS_ECN_NOT_ECT ||
                     is_overloaded() ) {
                         if ( can_mark_or_drop() )
@@ -295,21 +295,32 @@ void DualQCoupledAQM::mark( QueuedPacket & p )
 
  /* Returns TRUE with a certain likelihood modeling a recurring (and deterministic) 
     pattern of marks/drops */ 
-bool DualQCoupledAQM::recur( AbstractDualPI2PacketQueue & queue, double likelihood )
-{
-    std::cout << "##### In recur !! likelihood is " << likelihood << std::endl;
+// bool DualQCoupledAQM::recur( AbstractDualPI2PacketQueue & queue, double likelihood )
+// {
+//     std::cout << "##### In recur !! likelihood is " << likelihood << std::endl;
 
-    double count = queue.get_recur_count() + likelihood;
+//     double count = queue.get_recur_count() + likelihood;
 
-    std::cout << "##### The new count = " << count << std::endl;
-    if ( count > 1.0 ) {
-        //std::cout << "##### Count is higer than MAX_PROB. New count is: " << count - MAX_PROB << std::endl;
-        queue.set_recur_count( count - 1.0 );
-        return true;
-    }
-    queue.set_recur_count( count );
-    return false;
-}
+//     std::cout << "##### The new count = " << count << std::endl;
+//     if ( count > 1.0 ) {
+//         //std::cout << "##### Count is higer than MAX_PROB. New count is: " << count - MAX_PROB << std::endl;
+//         queue.set_recur_count( count - 1.0 );
+//         return true;
+//     }
+//     queue.set_recur_count( count );
+//     return false;
+// }
+
+bool DualQCoupledAQM::roll( double prob ) { 
+    
+    // Thread-local engine to mimic per-CPU PRNG state in the Linux kernel
+    // Only runs once per thread
+    static thread_local std::mt19937 engine(std::random_device{}());
+
+    uint32_t rand_int = engine(); // uniformly distributed in [0, 2^32 - 1]
+    double rand_double = static_cast<double>(rand_int) / static_cast<double>(UINT32_MAX);
+    return ( rand_double <= prob );
+ }
 
 void DualQCoupledAQM::set_periodic_update( void ) 
 {
