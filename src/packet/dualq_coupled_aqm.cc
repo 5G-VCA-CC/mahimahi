@@ -171,12 +171,12 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                     }
                 } 
 
-                if ( roll( p_cl_ ) ) {
+                // if ( roll( p_cl_ ) ) {
                     if ( can_mark_or_drop() )
                     {
                         mark( pkt );
                     }
-                } 
+                //} 
             }
             scheduler_update();
         } 
