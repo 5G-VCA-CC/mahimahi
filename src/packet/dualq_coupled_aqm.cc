@@ -307,7 +307,7 @@ void DualQCoupledAQM::set_periodic_update( void )
     poller_.add_action( Poller::Action( timer_, Direction::In, 
                                         [&] () {                                         
                                             // cout << "set_periodic_update function called! " << endl;
-
+                                            cout << "queue size in bytes: " << size_bytes() << endl;
                                             string str = timer_.read();
                                             //std::cout << " ------ Timer read output " << str << std::endl;
 
