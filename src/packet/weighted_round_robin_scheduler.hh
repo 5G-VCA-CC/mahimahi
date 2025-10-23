@@ -8,6 +8,8 @@
 
 #define MAX_WEIGHT 100
 
+#define KERNEL_HLEN_DIFF 10
+
 class WRRScheduler : public AbstractL4SScheduler
 {
 private: 
