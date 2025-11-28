@@ -157,10 +157,10 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 p_l_ = max(pp_l_, p_cl_);
 
                 if ( roll( p_l_) ) {
-                    if ( can_mark_or_drop() )
-                    {
+                    // if ( can_mark_or_drop() )
+                    // {
                         mark( pkt );
-                    }
+                    // }
                 }                      
             } else {
                 if ( roll( p_c_) ) {
