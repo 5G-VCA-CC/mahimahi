@@ -10,7 +10,7 @@ WRRScheduler::WRRScheduler (L4SPacketQueue & l4s_q, CLASSICPacketQueue & classic
     /* Adapted from the initialization of q->c_protection.init in sch_dualpi2.c, using the psched_mtu function.
        If the L4S weight is higher than the classic, the negative credit_init_ will give priority to the L4S queue.*/
     
-    credit_init_ = (int32_t)MTU * ( classic_weight_ - l4s_weight_ );
+    credit_init_ = (int32_t)(MTU + KERNEL_HLEN_DIFF) * (classic_weight_ - l4s_weight_);
     reset_credit();
 }
 
