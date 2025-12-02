@@ -343,7 +343,10 @@ void DualQCoupledAQM::set_periodic_update( void )
                                             cout << "pp =  " << std::to_string(pp_) << endl;
                                             cout << "p_c =  " << std::to_string(p_c_) << endl;
                                             cout << "p_cl =  " << std::to_string(p_cl_) << endl;
-
+                                            
+                                            cout << "queue size in bytes: " << size_bytes() << endl; 
+                                            cout << "queue size in packets: " << size_packets() << endl;
+                                            
                                             return ResultType::Continue;
                                         } ) ); 
 }
