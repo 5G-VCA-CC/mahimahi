@@ -1,7 +1,7 @@
 /* -*-mode:c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
-#ifndef ABSTRACT_L4S_SCHEDULER
-#define ABSTRACT_L4S_SCHEDULER
+#ifndef ABSTRACT_DUALQ_SCHEDULER
+#define ABSTRACT_DUALQ_SCHEDULER
 
 #include <string>
 
@@ -24,7 +24,7 @@ enum class SchedulerType {
     TS_FIFO
 };
 
-class AbstractL4SScheduler
+class AbstractDualQScheduler
 {
 protected:
     // Dual queues
@@ -33,15 +33,15 @@ protected:
 
 public:
 
-    AbstractL4SScheduler (L4SPacketQueue & l4s_q, CLASSICPacketQueue & classic_q) : 
+    AbstractDualQScheduler (L4SPacketQueue & l4s_q, CLASSICPacketQueue & classic_q) : 
         l4s_queue_ ( l4s_q ),
         classic_queue_( classic_q )
         {};
 
     virtual QueueType select_queue( void ) = 0;
 
-    virtual ~AbstractL4SScheduler() = default;
+    virtual ~AbstractDualQScheduler() = default;
 
 };
 
-#endif /* ABSTRACT_L4S_SCHEDULER */ 
+#endif /* ABSTRACT_DUALQ_SCHEDULER */ 

@@ -1,7 +1,7 @@
 #include "weighted_round_robin_scheduler.hh"
 
 WRRScheduler::WRRScheduler (L4SPacketQueue & l4s_q, CLASSICPacketQueue & classic_q)
-: AbstractL4SScheduler (l4s_q, classic_q),
+: AbstractDualQScheduler (l4s_q, classic_q),
     credit_ ( 0 ),
     credit_change_ ( 0 ),
     classic_weight_ ( 10 ),

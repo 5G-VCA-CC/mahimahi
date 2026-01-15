@@ -4,13 +4,13 @@
 #include <queue>
 #include <cassert>
 
-#include "abstract_l4s_scheduler.hh"
+#include "abstract_dualq_scheduler.hh"
 
 #define MAX_WEIGHT 100
 
 #define KERNEL_HLEN_DIFF 10
 
-class WRRScheduler : public AbstractL4SScheduler
+class WRRScheduler : public AbstractDualQScheduler
 {
 private: 
     // From the c_protection struct of the dualpi2 linux code.

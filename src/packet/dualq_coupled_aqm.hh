@@ -16,7 +16,7 @@
 #include "l4s_packet_queue.hh"
 #include "classic_packet_queue.hh"
 
-#include "abstract_l4s_scheduler.hh"
+#include "abstract_dualq_scheduler.hh"
 #include "weighted_round_robin_scheduler.hh"
 
 #define ALPHA_BETA_SHIFT 8
@@ -75,7 +75,7 @@ private:
     CLASSICPacketQueue classic_queue_;
 
     const SchedulerType scheduler_type_;
-    std::unique_ptr<AbstractL4SScheduler> scheduler_;
+    std::unique_ptr<AbstractDualQScheduler> scheduler_;
 
     uint32_t overload_drop_pkts_;
     uint32_t overflow_drop_pkts_;
