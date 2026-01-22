@@ -48,6 +48,8 @@ private:
     unsigned int byte_limit_;
     unsigned int packet_limit_;
 
+    Timerfd queue_log_timer_;
+
     // Proportional Integral (PI) controller parameters
 
     // Trigger update every...    
@@ -121,6 +123,7 @@ private:
 
 public:
     DualQCoupledAQM( const std::string & args );
+    void set_queue_log_timer_1ms( void );
 
     void enqueue( QueuedPacket && p ) override;
     QueuedPacket dequeue( void ) override;

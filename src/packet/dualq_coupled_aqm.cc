@@ -81,10 +81,40 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
 
     /* Start the periodic process that updates probs*/
     set_periodic_update ();
+    set_queue_log_timer_1ms();
+
 
     //std::cout << "end of the ctor " << std::endl;
     //std::cout << "packet_limit_= " << std::to_string(packet_limit_) << " byte_limit_= " << std::to_string(byte_limit_) << std::endl;
 }
+
+void DualQCoupledAQM::set_queue_log_timer_1ms( void )
+{
+    const timespec interval { 0, 1 * NS_PER_MS }; // 1 ms
+
+    queue_log_timer_.set_time( interval, interval );
+
+    poller_.add_action(
+        Poller::Action(
+            queue_log_timer_,
+            Direction::In,
+            [&]() {
+                std::cout
+                    << "[QUEUE_STATS_1ms] bytes="
+                    << size_bytes()
+                    << " packets="
+                    << size_packets()
+                    << std::endl;
+
+                // consume timer fd
+                queue_log_timer_.read();
+
+                return ResultType::Continue;
+            }
+        )
+    );
+}
+
 
 void DualQCoupledAQM::enqueue( QueuedPacket && p )
 {
