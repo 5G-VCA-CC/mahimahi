@@ -89,6 +89,14 @@ private:
     double p_c_;
     double p_cl_;
 
+    // logging ecn marking
+    uint64_t mark_pkts_ = 0;
+
+    // logging packet drops
+    uint64_t drop_l4s_pkts_;
+    uint64_t drop_classic_pkts_;
+    QueueType last_dequeue_from_;
+
     // For equivalence with the Linux kernel code
     // double p_Cmax_;
     // double p_Lmax_;
@@ -123,7 +131,7 @@ private:
 
 public:
     DualQCoupledAQM( const std::string & args );
-    void set_queue_log_timer_1ms( void );
+    void set_queue_log_timer_16ms( void );
 
     void enqueue( QueuedPacket && p ) override;
     QueuedPacket dequeue( void ) override;

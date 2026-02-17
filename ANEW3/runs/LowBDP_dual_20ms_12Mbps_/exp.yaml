@@ -1,0 +1,33 @@
+output_dir: /home/linghe-zhang/l4s-research/mahimahi/ANEW3/runs/LowBDP_dual_20ms_12Mbps_/outputs
+secs_per_run: 30
+num_runs: 20
+experiment_cpus: 3-9
+cores:
+  server_core_classic: 4
+  server_core_l4s: 5
+  mahimahi_core: 6
+  client_core_classic: 7
+  client_core_l4s: 8
+traces:
+  up: ../traces/DSL_12Mbps.up
+  down: ../traces/DSL_12Mbps.down
+mahimahi:
+  delay_ms: 10
+  link_delay_ms: 0
+queue:
+  type: dualPI2
+  packets: 250
+  target: 1
+  tupdate: 16
+  alpha: 0.00016
+  beta: 0.0032
+flows:
+  base_port: 5300
+  classic:
+    proto: tcp
+    tos: 0
+    cc: cubic
+  l4s:
+    tos: 1
+    cc: prague
+regime_name: LowBDP_dual_20ms_12Mbps

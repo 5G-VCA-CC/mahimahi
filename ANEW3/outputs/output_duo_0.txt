@@ -1,0 +1,39 @@
+[INIT] packets=10000,target=15,tupdate=16,alpha=0.00016,beta=0.0032 packets=10000 bytes=15040000
+Died on std::runtime_error: ../traces/Constant.down: error opening for reading
+Died on std::runtime_error: ../traces/Constant.up: error opening for reading
+Died on std::runtime_error: `downlink': process exited with failure status 1
+Died on std::runtime_error: `mm-link --uplink-queue=dualPI2 --uplink-queue-args=packets=10000,target=15,tupdate=16,alpha=0.00016,beta=0.0032 ../traces/Constant.up ../traces/Constant.down -- mm-delay 0 bash -lc 
+          set -euo pipefail
+
+          pids=()
+
+          if [[ 1 -eq 1 ]]; then
+            (
+              if [[ "udp" == "udp" ]]; then
+                taskset -c "7" iperf3 -c 10.0.0.1 -p 5300 -u                   -b "12M" -l "1200"                   -t "30" --tos "0"
+              elif [[ "udp" == "tcp" ]]; then
+                if [[ -n "" && "" != "null" ]]; then
+                  taskset -c "7" iperf3 -c 10.0.0.1 -p 5300                     -C ""                     -t "30" --tos "0"
+                else
+                  taskset -c "7" iperf3 -c 10.0.0.1 -p 5300                     -t "30" --tos "0"
+                fi
+              else
+                echo "[!] flows.classic.proto must be udp or tcp (got: udp)" >&2
+                exit 2
+              fi
+            ) &
+            pids+=($!)
+          fi
+
+          if [[ 1 -eq 1 ]]; then
+            (
+              taskset -c "8" iperf3 -c 10.0.0.1 -p 5301                 -C "prague"                 -t "30" --tos "1"
+            ) &
+            pids+=($!)
+          fi
+
+          for p in "${pids[@]}"; do
+            wait "$p"
+          done
+        ': process exited with failure status 1
+Died on std::runtime_error: `packetshell': process exited with failure status 1

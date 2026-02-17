@@ -3,7 +3,7 @@
 output_dir: ./outputs
 
 secs_per_run: 30
-num_runs: 5
+num_runs: 95
 
 # cpu shielding
 housekeeping: "0-3"
@@ -20,7 +20,7 @@ traces:
 
 queue:
   type: dualPI2
-  packets: 200
+  packets: 20000
   target: 1
   tupdate: 16
   alpha: 0.16
