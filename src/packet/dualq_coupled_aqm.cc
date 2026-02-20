@@ -162,6 +162,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 if ( roll( p_l_) ) {
                     // if ( can_mark_or_drop() )
                     // {
+                        std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
                         mark( pkt );
                     // }
                 }                      
@@ -177,6 +178,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 // if ( roll( p_cl_ ) ) {
                     if ( can_mark_or_drop() )
                     {
+                        std::cout << " ------------------------------- MARKING !! " << std::endl;
                         mark( pkt );
                     }
                 //} 
