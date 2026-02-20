@@ -228,6 +228,7 @@ void LinkQueue::record_departure( const uint64_t departure_time, const QueuedPac
 void LinkQueue::read_packet( const string & contents )
 {
     const uint64_t now = timestamp();
+    const uint64_t now_ns = timestamp_ns();
 
     if ( contents.size() > PACKET_SIZE ) {
         throw runtime_error( "packet size is greater than maximum" );
@@ -240,7 +241,7 @@ void LinkQueue::read_packet( const string & contents )
     unsigned int bytes_before = packet_queue_->size_bytes();
     unsigned int packets_before = packet_queue_->size_packets();
 
-    packet_queue_->enqueue( QueuedPacket( contents, now ) );
+    packet_queue_->enqueue( QueuedPacket( contents, now, now_ns ) );
 
     assert( packet_queue_->size_packets() <= packets_before + 1 );
     assert( packet_queue_->size_bytes() <= bytes_before + contents.size() );

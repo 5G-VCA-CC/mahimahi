@@ -65,8 +65,8 @@ private:
     // Target queue delay
     uint64_t target_ms_;
 
-    uint64_t l4s_qdelay_ms_;
-    uint64_t classic_qdelay_ms_;
+    uint64_t l4s_qdelay_ns_;
+    uint64_t classic_qdelay_ns_;
 
     uint32_t max_rtt_ms_;
 
