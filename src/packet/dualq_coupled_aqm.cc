@@ -158,11 +158,13 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns ); 
 
                 p_l_ = max(pp_l_, p_cl_);
+                
 
                 if ( roll( p_l_) ) {
                     // if ( can_mark_or_drop() )
                     // {
                         std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
+                        std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
                         mark( pkt );
                     // }
                 }                      
@@ -260,12 +262,15 @@ void DualQCoupledAQM::drop( DropReason reason )
 {
     switch ( reason ) {
         case DropReason::Overflow:
+            std::cout << "############################################# Drop Overflow!" << std::endl;
             overflow_drop_pkts_++;
             break;
         case DropReason::Overload:
+            std::cout << "############################################# Drop Overload!" << std::endl;
             overload_drop_pkts_++;
             break;
         case DropReason::NotECT:
+            std::cout << "############################################# Drop NotECT!" << std::endl;
             not_ect_drop_pkts_++;
             break;
     }
@@ -318,12 +323,18 @@ void DualQCoupledAQM::mark( QueuedPacket & p )
 
 bool DualQCoupledAQM::roll( double prob ) { 
     
+    if (prob == 0.0) return false; 
+    if (prob == 1.0) return true;
+    
     // Thread-local engine to mimic per-CPU PRNG state in the Linux kernel
     // Only runs once per thread
     static thread_local std::mt19937 engine(std::random_device{}());
 
     uint32_t rand_int = engine(); // uniformly distributed in [0, 2^32 - 1]
     double rand_double = static_cast<double>(rand_int) / static_cast<double>(UINT32_MAX);
+    
+    std::cout << "In ROLL: prob = " << std::to_string(prob) << ", ran_int = " << std::to_string(rand_int) << ", rand_double =" << std::to_string(rand_double); 
+
     return ( rand_double <= prob );
  }
 
@@ -409,14 +420,14 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
                     ((int64_t)qdelay - (int64_t)qdelay_old) * beta_;
 
     //if (delta <0 )
-    cout << ">> delta = " << std::to_string(delta) << endl;
+    //cout << ">> delta = " << std::to_string(delta) << endl;
 
     double new_pp;
     if (delta > 0) {
 		new_pp = scale_to_prob(delta) + pp_;
 		
 	} else {
-        cout << ">> delta NEGATIVE = " << std::to_string(delta) << endl;
+        //cout << ">> delta NEGATIVE = " << std::to_string(delta) << endl;
 		new_pp = pp_ - scale_to_prob(delta * -1);
 		
 	}

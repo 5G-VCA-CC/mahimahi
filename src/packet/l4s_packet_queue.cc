@@ -3,6 +3,8 @@
 #include "l4s_packet_queue.hh"
 #include "timestamp.hh"
 
+#include <iostream>
+
 using namespace std;
 
 L4SPacketQueue::L4SPacketQueue( const string & args )
@@ -17,7 +19,7 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
     else step_ = false;
 
     if ( max_delay_thresh_ms_ == 0 )
-        max_delay_thresh_ms_ = 1; // ms
+        max_delay_thresh_ms_ = 10; // ms
 
     if ( min_qlen_pkt_ == 0 )
         min_qlen_pkt_ = 1;
@@ -30,7 +32,8 @@ double L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay_ns )
         return 0.0;
 
     // In both the step and the ramp methods:
-    if ( qdelay_ns >= max_delay_thresh_ms_ * NS_PER_MS ) {
+    if ( qdelay_ns > max_delay_thresh_ms_ * NS_PER_MS ) {
+            std::cout << "L4S queue delay = " << std::to_string(qdelay_ns) << std::endl;
             return 1.0;
         }
 
