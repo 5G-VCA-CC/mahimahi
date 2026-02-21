@@ -150,13 +150,14 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
         if ( dequeue_from == QueueType::L4S ) {
             //std::cout << "> Scheduler selects L4S..." << std::endl;
+            //std::cout << "Packets in L4S queue before dequeue: " << std::to_string(size_packets()) << std::endl;
             pkt = l4s_queue_.dequeue();
             
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
 
                 l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
-                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns ); 
+                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns );
 
                 p_l_ = max(pp_l_, p_cl_);
                 
@@ -164,8 +165,8 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 if ( roll( p_l_) ) {
                     // if ( can_mark_or_drop() )
                     // {
-                        std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
-                        std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
+                        //std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
+                        //std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
                         mark( pkt );
                     // }
                 }                      
@@ -181,7 +182,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 // if ( roll( p_cl_ ) ) {
                     if ( can_mark_or_drop() )
                     {
-                        std::cout << " ------------------------------- MARKING !! " << std::endl;
+                        //std::cout << " ------------------------------- MARKING !! " << std::endl;
                         mark( pkt );
                     }
                 //} 
@@ -265,15 +266,15 @@ void DualQCoupledAQM::drop( DropReason reason )
 
     switch ( reason ) {
         case DropReason::Overflow:
-            std::cout << "############################################# Drop Overflow!" << std::endl;
+            //std::cout << "############################################# Drop Overflow!" << std::endl;
             overflow_drop_pkts_++;
             break;
         case DropReason::Overload:
-            std::cout << "############################################# Drop Overload!" << std::endl;
+            //std::cout << "############################################# Drop Overload!" << std::endl;
             overload_drop_pkts_++;
             break;
         case DropReason::NotECT:
-            std::cout << "############################################# Drop NotECT!" << std::endl;
+            //std::cout << "############################################# Drop NotECT!" << std::endl;
             not_ect_drop_pkts_++;
             break;
     }
@@ -336,7 +337,7 @@ bool DualQCoupledAQM::roll( double prob ) {
     uint32_t rand_int = engine(); // uniformly distributed in [0, 2^32 - 1]
     double rand_double = static_cast<double>(rand_int) / static_cast<double>(UINT32_MAX);
     
-    std::cout << "In ROLL: prob = " << std::to_string(prob) << ", ran_int = " << std::to_string(rand_int) << ", rand_double =" << std::to_string(rand_double); 
+    //std::cout << "In ROLL: prob = " << std::to_string(prob) << ", ran_int = " << std::to_string(rand_int) << ", rand_double =" << std::to_string(rand_double); 
 
     return ( rand_double <= prob );
  }
@@ -424,14 +425,14 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
     l4s_qdelay_ns_ = l4s_queue_.qdelay_in_ns( ref );
     classic_qdelay_ns_ = classic_queue_.qdelay_in_ns( ref );
 
-     cout << ">> l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
-     cout << ">> classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
+    //  cout << ">> l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
+    //  cout << ">> classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
     
 
     uint64_t qdelay = max( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
 
-     cout << ">> [new] l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
-     cout << ">> [new] classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
+    //  cout << ">> [new] l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
+    //  cout << ">> [new] classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
 
     // double new_pp = (static_cast<double>(qdelay) - target_ms_ * NS_PER_MS) * alpha_ +
     //                 (static_cast<double>(qdelay) - qdelay_old) * beta_  + pp_;
@@ -477,7 +478,7 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
         new_pp = 0.0;
     }
 
-    cout << ">> Old pp = " << std::to_string(pp_) << " New pp = " << std::to_string(new_pp) << endl;
+    // cout << ">> Old pp = " << std::to_string(pp_) << " New pp = " << std::to_string(new_pp) << endl;
 
     return new_pp;
 }

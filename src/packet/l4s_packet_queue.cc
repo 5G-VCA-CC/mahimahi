@@ -19,7 +19,7 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
     else step_ = false;
 
     if ( max_delay_thresh_ms_ == 0 )
-        max_delay_thresh_ms_ = 10; // ms
+        max_delay_thresh_ms_ = 1; // ms
 
     if ( min_qlen_pkt_ == 0 )
         min_qlen_pkt_ = 1;
@@ -27,13 +27,13 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
 
 double L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay_ns )
 {
-    // if ( size_packets() <= min_qlen_pkt_ )
-    //     // Do not mark packets if under min_qlen_pkt_ (default is 1)
-    //     return 0.0;
+    if ( size_packets() <= min_qlen_pkt_ )
+        // Do not mark packets if under min_qlen_pkt_ (default is 1)
+        return 0.0;
 
     // In both the step and the ramp methods:
     if ( qdelay_ns > max_delay_thresh_ms_ * NS_PER_MS ) {
-            std::cout << "L4S queue delay = " << std::to_string(qdelay_ns) << std::endl;
+            // std::cout << "L4S queue delay = " << std::to_string(qdelay_ns) << std::endl;
             return 1.0;
         }
 
