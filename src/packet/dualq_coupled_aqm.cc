@@ -154,8 +154,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
 
-                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
-                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns ); 
+                pp_l_ = l4s_queue_.calculate_l4s_native_prob( now - pkt.arrival_time_ns ); 
 
                 p_l_ = max(pp_l_, p_cl_);
                 
@@ -164,7 +163,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                     // if ( can_mark_or_drop() )
                     // {
                         std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
-                        std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
+                        //std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
                         mark( pkt );
                     // }
                 }                      
