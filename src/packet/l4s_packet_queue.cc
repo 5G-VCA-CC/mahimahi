@@ -19,7 +19,7 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
     else step_ = false;
 
     if ( max_delay_thresh_ms_ == 0 )
-        max_delay_thresh_ms_ = 10; // ms
+        max_delay_thresh_ms_ = 1; // ms
 
     if ( min_qlen_pkt_ == 0 )
         min_qlen_pkt_ = 1;
