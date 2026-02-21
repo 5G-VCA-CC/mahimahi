@@ -1,18 +1,18 @@
-output_dir: ./outputs/200mbps/l4s
+output_dir: ./outputs/200mbps/l4s_100
 
 secs_per_run: 30
 num_runs: 2
 
 # Mahimahi traces
 traces:
-  up: ../traces/Fiber_200Mbps.up
-  down: ../traces/Fiber_200Mbps.down
+  up: ../traces/DSL_12Mbps.up
+  down: ../traces/DSL_12Mbps.down
 
 # Always remember mahimahi for classic has inner 10ms RTT while kernel has 0
 # mahimahi also x2 this delay
 
 mahimahi:
-  delay_ms: 50 # 2 x 50 = 100ms
+  delay_ms: 100 # 2 x 50 = 100ms
 
 # Queue discipline configuration (used by mm-link)
 queue:
@@ -20,8 +20,8 @@ queue:
   packets: 4167
   target: 15
   tupdate: 16
-  alpha: 0.00016
-  beta: 0.0032
+  alpha: 0.16
+  beta: 3.2
 
 paths:
   scream_dir: /home/linghe-zhang/scream/scream

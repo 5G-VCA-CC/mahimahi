@@ -81,10 +81,11 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
 
     /* initialize base timestamp value */
     //initial_timestamp_ns();
+    start_ts_ns_ = timestamp_ns();
 
     /* Start the periodic process that updates probs*/
     set_periodic_update ();
-
+    
     ////std::cout << "end of the ctor " << std::endl;
     ////std::cout << "packet_limit_= " << std::to_string(packet_limit_) << " byte_limit_= " << std::to_string(byte_limit_) << std::endl;
 }
@@ -260,6 +261,8 @@ bool DualQCoupledAQM::can_mark_or_drop( void )
 
 void DualQCoupledAQM::drop( DropReason reason )
 {
+    drop_pkts_++;
+
     switch ( reason ) {
         case DropReason::Overflow:
             std::cout << "############################################# Drop Overflow!" << std::endl;
@@ -354,6 +357,24 @@ void DualQCoupledAQM::set_periodic_update( void )
                                             pp_ = calculate_base_aqm_prob ( now );
                                             p_c_ = pow( pp_, 2 );
                                             p_cl_ = pp_ * k_ ;
+
+                                            const uint64_t t_ms = (now - start_ts_ns_) / NS_PER_MS;
+
+                                            const unsigned int q_pkts  = size_packets();
+                                            const unsigned int q_bytes = size_bytes();
+
+                                            const double l_qdelay_ms = static_cast<double>(l4s_qdelay_ns_) / NS_PER_MS;
+                                            const double c_qdelay_ms = static_cast<double>(classic_qdelay_ns_) / NS_PER_MS;
+
+                                            std::cout
+                                            << "[QUEUE_STATS] t_ms=" << t_ms
+                                            << " q_pkts=" << q_pkts
+                                            << " q_bytes=" << q_bytes
+                                            << " qdelay_l_ms=" << l_qdelay_ms
+                                            << " qdelay_c_ms=" << c_qdelay_ms
+                                            << " ecn_mark=" << ecn_mark_pkts_
+                                            << " drop=" << drop_pkts_
+                                            << "\n";
 
                                             // cout << "-- Updated Probs -- " << endl;
                                             // cout << "pp =  " << std::to_string(pp_) << endl;

@@ -1,7 +1,0 @@
-[INIT] packets=4167,target=15,tupdate=16,alpha=0.00016,beta=0.0032 packets=4167 bytes=6267168
-Died on std::runtime_error: ../traces/Mbps.down: error opening for reading
-[DBG] whoami=linghe-zhang uid=1000 euid=1000
-[DBG] PATH=/home/linghe-zhang/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-[DBG] SUDO_USER=root USER=linghe-zhang
-[DBG] launching scream (SCReAM tags only; no iptables marking)
-Died on std::runtime_error: `downlink': process exited with failure status 1

@@ -87,6 +87,11 @@ private:
     double p_c_;
     double p_cl_;
 
+    uint64_t start_ts_ns_ = 0;
+
+    uint64_t ecn_mark_pkts_ = 0;   // total number of packets ECN-marked
+    uint64_t drop_pkts_ = 0;       // total number of drops (any reason)
+
     // For equivalence with the Linux kernel code
     // double p_Cmax_;
     // double p_Lmax_;

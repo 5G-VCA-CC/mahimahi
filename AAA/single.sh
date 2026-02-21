@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CFG="${1:-exp_100ms_200mbps_classic.yaml}"
+CFG="${1:-exp_100ms_200mbps_l4s.yaml}"
 RUN_USER="${SUDO_USER:-$(id -un)}"
 
 if [[ $EUID -ne 0 ]]; then
@@ -211,8 +211,6 @@ run_one() {
         --uplink-queue-args="$QUEUE_ARGS" \
         --meter-uplink \
         --meter-downlink \
-        --meter-uplink-delay \
-        --meter-downlink-delay \
         "$TRACE_UP" "$TRACE_DOWN" -- \
         mm-delay "$DELAY_MS" \
       bash -lc '
