@@ -149,12 +149,14 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
         if ( dequeue_from == QueueType::L4S ) {
             //std::cout << "> Scheduler selects L4S..." << std::endl;
+            std::cout << "Packets in L4S queue before dequeue: " << std::to_string(size_packets()) << std::endl;
             pkt = l4s_queue_.dequeue();
             
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
 
-                pp_l_ = l4s_queue_.calculate_l4s_native_prob( now - pkt.arrival_time_ns ); 
+                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
+                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns );
 
                 p_l_ = max(pp_l_, p_cl_);
                 
