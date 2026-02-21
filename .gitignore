@@ -43,4 +43,7 @@ Makefile.in
 /.vscode/
 /build/
 /configure~
+<<<<<<< HEAD
 /validation-bash
+=======
+>>>>>>> 80a963ae0945eadb80464ab07471bbbeb0b7486a

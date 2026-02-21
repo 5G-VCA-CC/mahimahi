@@ -35,7 +35,6 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     k_ ( 2 ),
     l4s_drop_on_overload_ ( true )
 {
-
     if ( packet_limit_ == 0 and byte_limit_ == 0 ) {
         packet_limit_ = 10000; /* default value from Linux code. Represents 125 ms at 1 Gbps */
         byte_limit_ = packet_limit_ * MTU;
@@ -48,12 +47,6 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     else if (byte_limit_ != 0) {
         packet_limit_ = byte_limit_ / MTU;
     }
-
-    std::cout << "[INIT] " << args
-          << " packets=" << packet_limit_
-          << " bytes=" << byte_limit_
-          << std::endl;
-
 
     //if ( k_ == 0 ) k_ = 2;
 
@@ -72,64 +65,28 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
         14:   beta = 0.3 / RTT_max                   % PI proportional gain in Hz */
     
     // Since the default time unit is ms, alpha and beta have to be in kHz
-    if ( alpha_ == 0 ) alpha_ = 0.00016;
-    if ( beta_ == 0 ) beta_ = 0.0032;
+    // if ( alpha_ == 0 ) alpha_ = 0.00016;
+    // if ( beta_ == 0 ) beta_ = 0.0032;
+
+    if ( alpha_ == 0 ) alpha_ = 0.16;
+    if ( beta_ == 0 ) beta_ = 3.2;
     
 
     if (scheduler_type_ == SchedulerType::WRR) {
         scheduler_ = std::unique_ptr<WRRScheduler>( new WRRScheduler(l4s_queue_, classic_queue_) );
     }
 
-    l4s_qdelay_ms_ = 0;
-    classic_qdelay_ms_ = 0;
+    l4s_qdelay_ns_ = 0;
+    classic_qdelay_ns_ = 0;
 
-    drop_l4s_pkts_ = 0;
-    drop_classic_pkts_ = 0;
-    last_dequeue_from_ = QueueType::NONE;
-    
     /* initialize base timestamp value */
-    initial_timestamp_ns();
+    //initial_timestamp_ns();
 
     /* Start the periodic process that updates probs*/
-    
     set_periodic_update ();
-    set_queue_log_timer_16ms();
 
     ////std::cout << "end of the ctor " << std::endl;
     ////std::cout << "packet_limit_= " << std::to_string(packet_limit_) << " byte_limit_= " << std::to_string(byte_limit_) << std::endl;
-}
-
-void DualQCoupledAQM::set_queue_log_timer_16ms( void )
-{
-    const timespec interval { 0, 16 * NS_PER_MS }; // 16 ms
-    queue_log_timer_.set_time( interval, interval );
-
-    poller_.add_action(
-        Poller::Action(
-            queue_log_timer_,
-            Direction::In,
-            [&]() {
-                queue_log_timer_.read();
-
-                uint64_t t_ms = timestamp();
-
-                std::cout
-                    << "[QUEUE_STATS]"
-                    << " t_ms=" << t_ms
-                    << " q_pkts=" << size_packets()
-                    << " q_bytes=" << size_bytes()
-                    << " ecn_mark=" << mark_pkts_
-                    << " drop_l4s=" << drop_l4s_pkts_
-                    << " drop_classic=" << drop_classic_pkts_
-                    << " drop_overflow=" << overflow_drop_pkts_
-                    << " drop_overload=" << overload_drop_pkts_
-                    << " drop_not_ect=" << not_ect_drop_pkts_
-                    << '\n';
-
-                return ResultType::Continue;
-            }
-        )
-    );
 }
 
 void DualQCoupledAQM::enqueue( QueuedPacket && p )
@@ -162,7 +119,6 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     if (( ecn_bits == IPTOS_ECN_ECT1 ) ||
         ( ecn_bits == IPTOS_ECN_CE )) {
             //std::cout << "> Calling L4S enqueue... " << std::endl;
-
         l4s_queue_.enqueue( std::move( p ) );
 
     } else {
@@ -180,7 +136,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
     //std::cout << "--In DualQCoupled AQM dequeue" << std::endl;
 
     QueueType dequeue_from;
-    uint64_t l4s_qdelay_ms;
+    uint64_t l4s_qdelay_ns;
     uint64_t now;
 
     do {
@@ -190,23 +146,25 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
         QueuedPacket pkt("", 0);
         dequeue_from = scheduler_->select_queue();
-        last_dequeue_from_ = dequeue_from;
 
         if ( dequeue_from == QueueType::L4S ) {
             //std::cout << "> Scheduler selects L4S..." << std::endl;
             pkt = l4s_queue_.dequeue();
             
             if ( not is_overloaded() ) {
-                now = timestamp();
+                now = timestamp_ns();
 
-                l4s_qdelay_ms = l4s_queue_.qdelay_in_ms( now );
-                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ms ); 
+                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
+                pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns ); 
 
                 p_l_ = max(pp_l_, p_cl_);
+                
 
                 if ( roll( p_l_) ) {
                     // if ( can_mark_or_drop() )
                     // {
+                        std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
+                        std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
                         mark( pkt );
                     // }
                 }                      
@@ -222,6 +180,7 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                 // if ( roll( p_cl_ ) ) {
                     if ( can_mark_or_drop() )
                     {
+                        std::cout << " ------------------------------- MARKING !! " << std::endl;
                         mark( pkt );
                     }
                 //} 
@@ -301,20 +260,17 @@ bool DualQCoupledAQM::can_mark_or_drop( void )
 
 void DualQCoupledAQM::drop( DropReason reason )
 {
-    if (last_dequeue_from_ == QueueType::L4S) {
-        drop_l4s_pkts_++;
-    } else if (last_dequeue_from_ == QueueType::Classic) {
-        drop_classic_pkts_++;
-    }
-
     switch ( reason ) {
         case DropReason::Overflow:
+            std::cout << "############################################# Drop Overflow!" << std::endl;
             overflow_drop_pkts_++;
             break;
         case DropReason::Overload:
+            std::cout << "############################################# Drop Overload!" << std::endl;
             overload_drop_pkts_++;
             break;
         case DropReason::NotECT:
+            std::cout << "############################################# Drop NotECT!" << std::endl;
             not_ect_drop_pkts_++;
             break;
     }
@@ -343,9 +299,8 @@ void DualQCoupledAQM::mark( QueuedPacket & p )
     ip_header->check = calculate_ip_checksum ((unsigned short*) ip_header, ip_header->ihl << 2);
 
     struct iphdr *ip_header2 = (struct iphdr *) &p.contents[4];
-    mark_pkts_++;
-
     //std::cout << "-- New Checksum: " << ntohs(ip_header->check) << " should be = "<< ntohs(ip_header2->check) << std::endl;
+
 }
 
  /* Returns TRUE with a certain likelihood modeling a recurring (and deterministic) 
@@ -368,12 +323,18 @@ void DualQCoupledAQM::mark( QueuedPacket & p )
 
 bool DualQCoupledAQM::roll( double prob ) { 
     
+    if (prob == 0.0) return false; 
+    if (prob == 1.0) return true;
+    
     // Thread-local engine to mimic per-CPU PRNG state in the Linux kernel
     // Only runs once per thread
     static thread_local std::mt19937 engine(std::random_device{}());
 
     uint32_t rand_int = engine(); // uniformly distributed in [0, 2^32 - 1]
     double rand_double = static_cast<double>(rand_int) / static_cast<double>(UINT32_MAX);
+    
+    std::cout << "In ROLL: prob = " << std::to_string(prob) << ", ran_int = " << std::to_string(rand_int) << ", rand_double =" << std::to_string(rand_double); 
+
     return ( rand_double <= prob );
  }
 
@@ -387,21 +348,13 @@ void DualQCoupledAQM::set_periodic_update( void )
                                             // cout << "set_periodic_update function called! " << endl;
 
                                             string str = timer_.read();
-                                            // //std::cout << " ------ Timer read output " << str << std::endl;
+                                            //std::cout << " ------ Timer read output " << str << std::endl;
 
-                                            uint64_t now = timestamp();
+                                            uint64_t now = timestamp_ns();
                                             pp_ = calculate_base_aqm_prob ( now );
                                             p_c_ = pow( pp_, 2 );
                                             p_cl_ = pp_ * k_ ;
 
-                                            // cout << "-- Updated Probs -- " << endl;
-                                            // cout << "pp =  " << std::to_string(pp_) << endl;
-                                            // cout << "p_c =  " << std::to_string(p_c_) << endl;
-                                            // cout << "p_cl =  " << std::to_string(p_cl_) << endl;
-                                            
-                                            // cout << "queue size in bytes: " << size_bytes() << endl; 
-                                            // cout << "queue size in packets: " << size_packets() << endl;
-                                            
                                             // cout << "-- Updated Probs -- " << endl;
                                             // cout << "pp =  " << std::to_string(pp_) << endl;
                                             // cout << "p_c =  " << std::to_string(p_c_) << endl;
@@ -417,6 +370,18 @@ void DualQCoupledAQM::set_periodic_update( void )
 
 // }
 
+double scale_to_prob ( double val ) 
+    {
+        //if (val <= 0.0) return 0.0;
+
+        double scaled_val = val/64.0; 
+        
+        // if (scaled_val >= std::numeric_limits<uint32_t>::max()) 
+        //    return 1.0; 
+        
+        return scaled_val / static_cast<double>(std::numeric_limits<uint32_t>::max());
+    }
+
 double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref ) 
 {
     /* From  RFC 9332   : dualpi2_update function
@@ -427,26 +392,60 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
     // cout << ">> alpha = " << std::to_string(alpha_) << endl;
     // cout << ">> beta = " << std::to_string(beta_) << endl;
 
-    uint64_t qdelay_old = max( l4s_qdelay_ms_, classic_qdelay_ms_ ) ;
+    uint64_t qdelay_old = max( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
 
-    // cout << ">> [old] l4s_qdelay_ms = " << std::to_string(l4s_qdelay_ms_) << endl;
-    // cout << ">> [old] classic_qdelay_ms = " << std::to_string(classic_qdelay_ms_) << endl;
+    // cout << ">> [old] l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
+    // cout << ">> [old] classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
 
     
 
     // Update the qdelays
-    l4s_qdelay_ms_ = l4s_queue_.qdelay_in_ms( ref );
-    classic_qdelay_ms_ = classic_queue_.qdelay_in_ms( ref );
+    l4s_qdelay_ns_ = l4s_queue_.qdelay_in_ns( ref );
+    classic_qdelay_ns_ = classic_queue_.qdelay_in_ns( ref );
 
-    uint64_t qdelay = max( l4s_qdelay_ms_, classic_qdelay_ms_ ) ;
+     cout << ">> l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
+     cout << ">> classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
+    
 
-    // cout << ">> [new] l4s_qdelay_ms = " << std::to_string(l4s_qdelay_ms_) << endl;
-    // cout << ">> [new] classic_qdelay_ms = " << std::to_string(classic_qdelay_ms_) << endl;
+    uint64_t qdelay = max( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
 
-    double new_pp = (static_cast<double>(qdelay) - target_ms_) * alpha_ +
-                    (static_cast<double>(qdelay) - qdelay_old) * beta_  + pp_;
+     cout << ">> [new] l4s_qdelay_ns = " << std::to_string(l4s_qdelay_ns_) << endl;
+     cout << ">> [new] classic_qdelay_ns = " << std::to_string(classic_qdelay_ns_) << endl;
 
-    // cout << ">> new_prob = " << std::to_string(new_prob) << endl;
+    // double new_pp = (static_cast<double>(qdelay) - target_ms_ * NS_PER_MS) * alpha_ +
+    //                 (static_cast<double>(qdelay) - qdelay_old) * beta_  + pp_;
+
+
+    double delta = ((int64_t)qdelay - (int64_t)target_ms_ * NS_PER_MS) * alpha_ +
+                    ((int64_t)qdelay - (int64_t)qdelay_old) * beta_;
+
+    //if (delta <0 )
+    //cout << ">> delta = " << std::to_string(delta) << endl;
+
+    double new_pp;
+    if (delta > 0) {
+		new_pp = scale_to_prob(delta) + pp_;
+		
+	} else {
+        //cout << ">> delta NEGATIVE = " << std::to_string(delta) << endl;
+		new_pp = pp_ - scale_to_prob(delta * -1);
+		
+	}
+
+
+    
+
+
+
+
+    //---------------------------------------
+
+    // double new_pp = (qdelay - target_ms_ * NS_PER_MS) * alpha_ +
+    //                 (qdelay - qdelay_old) * beta_  + pp_;
+
+    
+
+    // //cout << ">> new_prob = " << std::to_string(new_pp) << endl;
 
     if ( new_pp > 1.0 ) {
         // prevent overflow
@@ -457,10 +456,13 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
         new_pp = 0.0;
     }
 
-    // TODO: check the capping of p' if no drop on overload
+    cout << ">> Old pp = " << std::to_string(pp_) << " New pp = " << std::to_string(new_pp) << endl;
 
     return new_pp;
 }
+
+
+
 
 // unsigned int DualQCoupledAQM::get_arg( const string & args, const string & name )
 // {

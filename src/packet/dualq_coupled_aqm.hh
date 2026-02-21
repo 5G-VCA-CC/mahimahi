@@ -48,8 +48,6 @@ private:
     unsigned int byte_limit_;
     unsigned int packet_limit_;
 
-    Timerfd queue_log_timer_;
-
     // Proportional Integral (PI) controller parameters
 
     // Trigger update every...    
@@ -67,8 +65,8 @@ private:
     // Target queue delay
     uint64_t target_ms_;
 
-    uint64_t l4s_qdelay_ms_;
-    uint64_t classic_qdelay_ms_;
+    uint64_t l4s_qdelay_ns_;
+    uint64_t classic_qdelay_ns_;
 
     uint32_t max_rtt_ms_;
 
@@ -88,14 +86,6 @@ private:
     double p_l_;
     double p_c_;
     double p_cl_;
-
-    // logging ecn marking
-    uint64_t mark_pkts_ = 0;
-
-    // logging packet drops
-    uint64_t drop_l4s_pkts_;
-    uint64_t drop_classic_pkts_;
-    QueueType last_dequeue_from_;
 
     // For equivalence with the Linux kernel code
     // double p_Cmax_;
@@ -131,7 +121,6 @@ private:
 
 public:
     DualQCoupledAQM( const std::string & args );
-    void set_queue_log_timer_16ms( void );
 
     void enqueue( QueuedPacket && p ) override;
     QueuedPacket dequeue( void ) override;

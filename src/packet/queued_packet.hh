@@ -9,10 +9,15 @@
 struct QueuedPacket
 {
     uint64_t arrival_time;
+    uint64_t arrival_time_ns;
     std::string contents;
 
     QueuedPacket( const std::string & s_contents, uint64_t s_arrival_time )
-        : arrival_time( s_arrival_time ), contents( s_contents )
+        : arrival_time( s_arrival_time ), arrival_time_ns( 0 ), contents( s_contents )
+    {}
+
+    QueuedPacket( const std::string & s_contents, uint64_t s_arrival_time, uint64_t s_arrival_time_ns )
+        : arrival_time( s_arrival_time ), arrival_time_ns( s_arrival_time_ns ), contents( s_contents )
     {}
 
     uint64_t sojourn_time_in_ns ( uint64_t ref )
