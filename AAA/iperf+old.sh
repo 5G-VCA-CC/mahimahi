@@ -98,11 +98,16 @@ mkdir -p "$OUT_DIR"
 chown -R "$RUN_USER:$RUN_USER" "$OUT_DIR" 2>/dev/null || true
 
 cleanup_all() {
+  # kill any leftover mm-link sessions by name (fallback)
   pkill -9 -x mm-link 2>/dev/null || true
   pkill -9 -x mm-delay 2>/dev/null || true
   pkill -9 -x iperf3 2>/dev/null || true
-}
 
+  # extra: if we still have a mm_pid from the last run, kill its whole process group
+  if [[ -n "${mm_pid:-}" ]]; then
+    kill -9 -- "-$mm_pid" 2>/dev/null || true
+  fi
+}
 cleanup_mm_netns() {
   command -v ip >/dev/null 2>&1 || return 0
   while read -r ns _; do
