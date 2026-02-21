@@ -33,7 +33,7 @@ double L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay_ns )
 
     // In both the step and the ramp methods:
     if ( qdelay_ns > max_delay_thresh_ms_ * NS_PER_MS ) {
-            std::cout << "L4S queue delay = " << std::to_string(qdelay_ns) << std::endl;
+            // std::cout << "L4S queue delay = " << std::to_string(qdelay_ns) << std::endl;
             return 1.0;
         }
 
