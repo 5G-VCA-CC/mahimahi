@@ -4,7 +4,6 @@
 #define DUALQ_COUPLED_AQM_HH
 
 #include <random>
-//#include <thread>
 #include <chrono>
 #include <atomic>
 #include <netinet/ip.h>
@@ -34,7 +33,7 @@
 
 enum class DropReason {
     Overload, // a.k.a. saturation
-    Overflow,  // exceeding queue limits
+    Overflow, // exceeding queue limits
     NotECT
 };
 
@@ -87,10 +86,6 @@ private:
     double p_c_;
     double p_cl_;
 
-    // For equivalence with the Linux kernel code
-    // double p_Cmax_;
-    // double p_Lmax_;
-
     double max_prob;
     bool l4s_drop_on_overload_;
 
@@ -112,10 +107,6 @@ private:
 
     void mark( QueuedPacket & p );
 
-    // For equivalence with the Linux code
-    // bool l4s_is_overloaded( void ) { return p_cl_ >= p_Lmax_; }
-    // bool classic_is_overloaded ( void ) { return p_c_ >= p_Cmax_; }
-
     bool is_overloaded( void ) { return p_cl_ > max_prob; }
     void scheduler_update( void );
 
@@ -134,7 +125,6 @@ public:
     unsigned int size_bytes( void ) const override;
     unsigned int size_packets( void ) const override;
 
-    //bool recur( AbstractDualPI2PacketQueue & queue, double likelihood );
     bool roll( double prob );
 
     void set_periodic_update( void );

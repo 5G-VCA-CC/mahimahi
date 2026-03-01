@@ -21,6 +21,7 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
     if ( max_delay_thresh_ms_ == 0 )
         max_delay_thresh_ms_ = 1; // ms
 
+      std::cout << "max_delay_thresh_ms_ " << std::to_string(max_delay_thresh_ms_) << std::endl;  
     if ( min_qlen_pkt_ == 0 )
         min_qlen_pkt_ = 1;
 }
@@ -33,7 +34,6 @@ double L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay_ns )
 
     // In both the step and the ramp methods:
     if ( qdelay_ns > max_delay_thresh_ms_ * NS_PER_MS ) {
-            // std::cout << "L4S queue delay = " << std::to_string(qdelay_ns) << std::endl;
             return 1.0;
         }
 
@@ -49,7 +49,6 @@ double L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay_ns )
             return ( qdelay_ns - min_delay_thresh_ms_ * NS_PER_MS )/
                 ( max_delay_thresh_ms_ * NS_PER_MS - min_delay_thresh_ms_ * NS_PER_MS );
         }
-        
         return 0;
     }
 }

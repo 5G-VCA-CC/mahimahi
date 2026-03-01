@@ -4,11 +4,6 @@
 #define ABSTRACT_DUALPI2_PACKET_QUEUE_HH
 
 #include <queue>
-// #include <cassert>
-
-// #include <random>
-// #include <thread>
-
 #include "abstract_packet_queue.hh"
 
 
