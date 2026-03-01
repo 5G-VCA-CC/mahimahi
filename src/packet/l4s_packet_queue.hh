@@ -7,6 +7,8 @@
 #include <thread>
 #include "abstract_dualpi2_packet_queue.hh"
 
+#define NS_PER_MS 1000000
+
 /*
    L4S queue implementation as part of the DualPI2 implentation described in RFC 9332.
 */

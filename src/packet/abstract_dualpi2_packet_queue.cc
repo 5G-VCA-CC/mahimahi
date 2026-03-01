@@ -13,15 +13,14 @@ using namespace std;
 
 void AbstractDualPI2PacketQueue::enqueue( QueuedPacket && p )
 {
-    std::cout << "> In enqueue. Packet of size "<< p.contents.size()  << " to enqueue: "  <<  std::endl;
+    // std::cout << "> In enqueue. Packet of size "<< p.contents.size()  << " to enqueue: "  <<  std::endl;
     print_ipv4_header( p ) ;
 
     queue_size_in_bytes_ += p.contents.size();
     queue_size_in_packets_++;
     internal_queue_.emplace( std::move( p ) );
     
-    std::cout << "> In enqueue. Queue size is " << size_bytes() << " bytes, or " << size_packets() 
-    << " packets." <<  std::endl;
+    //std::cout << "> In enqueue. Queue size is " << size_bytes() << " bytes, or " << size_packets() << " packets." <<  std::endl;
 }
 
 QueuedPacket AbstractDualPI2PacketQueue::dequeue( void )
@@ -84,12 +83,12 @@ QueuedPacket& AbstractDualPI2PacketQueue::peek( void )
     return internal_queue_.front();
 }
 
-uint64_t AbstractDualPI2PacketQueue::qdelay_in_ms ( uint64_t ref ) 
+uint64_t AbstractDualPI2PacketQueue::qdelay_in_ns ( uint64_t ref ) 
 {
     if ( internal_queue_.empty() ) return 0;
     
     QueuedPacket& head = peek();
-    return ref - head.arrival_time;
+    return ref - head.arrival_time_ns;
 }
 
 // Utilities
