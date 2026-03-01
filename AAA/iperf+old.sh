@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CFG="${1:-exp_100ms_200mbps_l4s.yaml}"
+CFG="${1:-exp_100ms_200mbps_classic.yaml}"
 RUN_USER="${SUDO_USER:-$(id -un)}"
 
 if [[ $EUID -ne 0 ]]; then
@@ -83,12 +83,32 @@ Q_TUPDATE="$(yaml_get '.queue.tupdate')"
 Q_ALPHA="$(yaml_get '.queue.alpha')"
 Q_BETA="$(yaml_get '.queue.beta')"
 
+# ----------------------------
+# NEW: L4S max delay threshold (ms)
+# YAML: MAX_DELAY_THRESH_MS: <value>
+# passed to qdisc as: l4s_max_threshold=<value>
+# ----------------------------
+MAX_DELAY_THRESH_MS="$(yaml_get '.MAX_DELAY_THRESH_MS')"
+: "${MAX_DELAY_THRESH_MS:=}"
+
 BASE_PORT="$(yaml_get '.flows.base_port')"
 
 DELAY_MS="$(yaml_get '.mahimahi.delay_ms')"
 : "${DELAY_MS:=0}"
 
 QUEUE_ARGS="packets=${Q_PACKETS},target=${Q_TARGET},tupdate=${Q_TUPDATE},alpha=${Q_ALPHA},beta=${Q_BETA}"
+
+# ----------------------------
+# NEW: append L4S arg if provided
+# ----------------------------
+if [[ -n "${MAX_DELAY_THRESH_MS}" && "${MAX_DELAY_THRESH_MS}" != "null" ]]; then
+  if [[ "${MAX_DELAY_THRESH_MS}" =~ ^[0-9]+$ ]]; then
+    QUEUE_ARGS="${QUEUE_ARGS},l4s_max_threshold=${MAX_DELAY_THRESH_MS}"
+  else
+    echo "[!] MAX_DELAY_THRESH_MS must be an integer (ms). Got: '${MAX_DELAY_THRESH_MS}'"
+    exit 2
+  fi
+fi
 
 : "${SECS:=30}"
 : "${NUM_RUNS:=1}"
@@ -287,6 +307,7 @@ run_one() {
 start="$(next_index)"
 for ((i=0; i<NUM_RUNS; i++)); do
   run_one $((start + i))
+  sleep 1
   cleanup_all
   cleanup_mm_netns
   sleep 3

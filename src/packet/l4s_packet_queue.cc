@@ -11,7 +11,7 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
   : max_delay_thresh_ms_( get_arg( args, "l4s_max_threshold" ) ),
     min_delay_thresh_ms_ ( get_arg( args, "l4s_min_threshold" ) ),
     min_qlen_pkt_ ( get_arg( args, "l4s_min_len" ) )
-{   
+{
     if ( min_delay_thresh_ms_ == 0 ) {
         // Use the step function (as opposed to ramp)
         step_ = true;
@@ -49,8 +49,7 @@ double L4SPacketQueue::calculate_l4s_native_prob ( uint64_t qdelay_ns )
             return ( qdelay_ns - min_delay_thresh_ms_ * NS_PER_MS )/
                 ( max_delay_thresh_ms_ * NS_PER_MS - min_delay_thresh_ms_ * NS_PER_MS );
         }
-        
+
         return 0;
     }
 }
-

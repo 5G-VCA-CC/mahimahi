@@ -1,7 +1,8 @@
-output_dir: ./outputs/200mbps/classic
+output_dir: ./outputs/200mbps/classic-45
 
-secs_per_run: 35
-num_runs: 50
+secs_per_run: 30
+num_runs: 100
+MAX_DELAY_THRESH_MS: 1
 
 # Mahimahi traces
 traces:
@@ -18,10 +19,10 @@ mahimahi:
 queue:
   type: dualPI2
   packets: 4167
-  target: 15
+  target: 45
   tupdate: 16
-  alpha: 0.00016
-  beta: 0.0032
+  alpha: 0.16
+  beta: 3.2
 
 paths:
   scream_dir: /home/linghe-zhang/scream/scream

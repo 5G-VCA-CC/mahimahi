@@ -16,8 +16,8 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
   : byte_limit_( get_arg( args, "bytes" ) ),
     packet_limit_( get_arg( args, "packets" ) ),
     //k_ ( get_arg( args, "k" ) ),
-    l4s_queue_ ( L4SPacketQueue ( "" ) ),
-    classic_queue_ ( CLASSICPacketQueue ( "" ) ),
+    l4s_queue_ ( L4SPacketQueue ( args ) ),
+    classic_queue_ ( CLASSICPacketQueue ( args ) ),
     scheduler_type_ ( static_cast<SchedulerType> (get_arg( args, "sched" ))),
     target_ms_ ( get_arg( args, "target" ) ),
     max_rtt_ms_ ( get_arg( args, "max_rtt" ) ),
@@ -56,21 +56,21 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
 
     max_prob = 1.0;
 
-    if ( target_ms_ == 0 ) target_ms_ = 15; 
+    if ( target_ms_ == 0 ) target_ms_ = 15;
     if ( max_rtt_ms_ == 0 ) max_rtt_ms_ = 100;
     if ( t_update_ms_ == 0 ) t_update_ms_ = 16; // RFC 9332: Tupdate = min(target, RTT_max/3)
 
     /* From RFC 9332:
         13:   alpha = 0.1 * Tupdate / RTT_max^2      % PI integral gain in Hz
         14:   beta = 0.3 / RTT_max                   % PI proportional gain in Hz */
-    
+
     // Since the default time unit is ms, alpha and beta have to be in kHz
     // if ( alpha_ == 0 ) alpha_ = 0.00016;
     // if ( beta_ == 0 ) beta_ = 0.0032;
 
     if ( alpha_ == 0 ) alpha_ = 0.16;
     if ( beta_ == 0 ) beta_ = 3.2;
-    
+
 
     if (scheduler_type_ == SchedulerType::WRR) {
         scheduler_ = std::unique_ptr<WRRScheduler>( new WRRScheduler(l4s_queue_, classic_queue_) );
@@ -85,7 +85,7 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
 
     /* Start the periodic process that updates probs*/
     set_periodic_update ();
-    
+
     ////std::cout << "end of the ctor " << std::endl;
     ////std::cout << "packet_limit_= " << std::to_string(packet_limit_) << " byte_limit_= " << std::to_string(byte_limit_) << std::endl;
 }
@@ -304,7 +304,7 @@ void DualQCoupledAQM::mark( QueuedPacket & p )
 
     struct iphdr *ip_header2 = (struct iphdr *) &p.contents[4];
     //std::cout << "-- New Checksum: " << ntohs(ip_header->check) << " should be = "<< ntohs(ip_header2->check) << std::endl;
-
+    ecn_mark_pkts_++;
 }
 
  /* Returns TRUE with a certain likelihood modeling a recurring (and deterministic) 
