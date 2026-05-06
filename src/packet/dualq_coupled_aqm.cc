@@ -82,6 +82,8 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     // check if the periodic update function is due, return immediately if not.
     poller_.poll( 0 );
 
+
+    std::cout << "> Packet size (enqueue): " << std::to_string(p.contents.size()) << std::endl;
     if ( size_bytes() + MTU > byte_limit_) {
         drop (DropReason::Overflow);
         return;
@@ -92,7 +94,9 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
 
     if (( ecn_bits == IPTOS_ECN_ECT1 ) ||
         ( ecn_bits == IPTOS_ECN_CE )) {
-        l4s_queue_.enqueue( std::move( p ) );
+            //std::cout << "> Calling L4S enqueue... " << std::endl;
+            p.enqueue_time_ns = timestamp_ns();
+            l4s_queue_.enqueue( std::move( p ) );
 
     } else {
         classic_queue_.enqueue( std::move( p ) );
@@ -115,6 +119,11 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
         if ( dequeue_from == QueueType::L4S ) {
             pkt = l4s_queue_.dequeue();
+
+            std::cout << "Packet size bytes (dequeue): " << std::to_string(pkt.contents.size()) << std::endl;
+            std::cout << "Packet arrival time ns: " << std::to_string(pkt.arrival_time_ns) << std::endl;
+            std::cout << "Packet enqueue time ns: " << std::to_string(pkt.enqueue_time_ns) << std::endl;
+            std::cout << "Diff: " << std::to_string(pkt.enqueue_time_ns - pkt.arrival_time_ns) << std::endl << std::endl;
             
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
@@ -261,6 +270,8 @@ void DualQCoupledAQM::set_periodic_update( void )
 {
     const timespec interval { 0, t_update_ms_ * NS_PER_MS };
     timer_.set_time( interval, interval );
+
+    
    
     poller_.add_action( Poller::Action( timer_, Direction::In, 
                                         [&] () {                                         
