@@ -94,6 +94,12 @@ private:
     double max_prob;
     bool l4s_drop_on_overload_;
 
+    uint32_t mark_count_total; 
+    uint32_t mark_pp_l;
+    uint32_t mark_overload;
+
+    uint64_t last_dequeue_time;
+
     std::atomic<bool> update_running_ {true};
 
 

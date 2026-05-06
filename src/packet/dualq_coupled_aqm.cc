@@ -85,6 +85,11 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     /* Start the periodic process that updates probs*/
     set_periodic_update ();
 
+    mark_count_total = 0;
+    mark_pp_l = 0;
+    mark_overload =0;
+
+    last_dequeue_time = 0;
     ////std::cout << "end of the ctor " << std::endl;
     ////std::cout << "packet_limit_= " << std::to_string(packet_limit_) << " byte_limit_= " << std::to_string(byte_limit_) << std::endl;
 }
@@ -102,6 +107,8 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     // //std::cout << "> Polling (start of enqueue)" << std::endl;
     poller_.poll( 0 );
 
+
+    std::cout << "> Packet size (enqueue): " << std::to_string(p.contents.size()) << std::endl;
     if ( size_bytes() + MTU > byte_limit_) {
         // //std::cout << "> Drop due to overflow!! " << std::endl;
         drop (DropReason::Overflow);
@@ -119,7 +126,8 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     if (( ecn_bits == IPTOS_ECN_ECT1 ) ||
         ( ecn_bits == IPTOS_ECN_CE )) {
             //std::cout << "> Calling L4S enqueue... " << std::endl;
-        l4s_queue_.enqueue( std::move( p ) );
+            p.enqueue_time_ns = timestamp_ns();
+            l4s_queue_.enqueue( std::move( p ) );
 
     } else {
         //std::cout << "> Calling Classic enqueue... " << std::endl;
@@ -150,7 +158,13 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         if ( dequeue_from == QueueType::L4S ) {
             //std::cout << "> Scheduler selects L4S..." << std::endl;
             //std::cout << "Packets in L4S queue before dequeue: " << std::to_string(size_packets()) << std::endl;
+            
             pkt = l4s_queue_.dequeue();
+
+            std::cout << "Packet size bytes (dequeue): " << std::to_string(pkt.contents.size()) << std::endl;
+            std::cout << "Packet arrival time ns: " << std::to_string(pkt.arrival_time_ns) << std::endl;
+            std::cout << "Packet enqueue time ns: " << std::to_string(pkt.enqueue_time_ns) << std::endl;
+            std::cout << "Diff: " << std::to_string(pkt.enqueue_time_ns - pkt.arrival_time_ns) << std::endl << std::endl;
             
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
@@ -167,6 +181,15 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                         //std::cout << " ------------------------------- MARKING !! No Overload" << std::endl;
                         //std::cout << "Probs: p_l_ = " << std::to_string(p_l_) << ", p_cl_ = " <<  std::to_string(p_cl_) << ", pp_l_ = " << std::to_string(pp_l_) << std::endl;
                         mark( pkt );
+                        mark_count_total++; 
+                        if (pp_l_) 
+                        {
+                            mark_pp_l++;
+                            std::cout << "New MARK (pp_l). Mark_pp_l = " << std::to_string(mark_pp_l) << std::endl;
+                        }
+
+                        std::cout << "New MARK. Total = " << std::to_string(mark_count_total) << std::endl;
+
                     // }
                 }                      
             } else {
@@ -183,6 +206,11 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
                     {
                         //std::cout << " ------------------------------- MARKING !! " << std::endl;
                         mark( pkt );
+                        mark_count_total++;
+                        mark_overload++;
+
+                        std::cout << "New MARK (overload). Mark_overload = " << std::to_string(mark_overload) << std::endl;
+                        std::cout << "New MARK. Total = " << std::to_string(mark_count_total) << std::endl;
                     }
                 //} 
             }
@@ -216,6 +244,11 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         //std::cout << "> Polling (end of dequeue iteration)" << std::endl;
         poller_.poll( 0 );
 
+        uint64_t new_dequeue_time = timestamp_ns(); 
+        std::cout << std::endl;
+        std::cout << "Time since last dequeue (ns): " << std::to_string(new_dequeue_time - last_dequeue_time) << std::endl;
+        std::cout << "Timestamp at dequeue (ns): " << std::to_string(new_dequeue_time) << std::endl;
+        last_dequeue_time = new_dequeue_time;
         return pkt;
 
     } while ( dequeue_from != QueueType::NONE );
@@ -343,11 +376,13 @@ void DualQCoupledAQM::set_periodic_update( void )
 {
     const timespec interval { 0, t_update_ms_ * NS_PER_MS };
     timer_.set_time( interval, interval );
+
+    
    
     poller_.add_action( Poller::Action( timer_, Direction::In, 
                                         [&] () {                                         
                                             // cout << "set_periodic_update function called! " << endl;
-
+                                            //std::cout << "Packets in whole queue " << std::to_string(size_packets()) << std::endl;
                                             string str = timer_.read();
                                             //std::cout << " ------ Timer read output " << str << std::endl;
 
