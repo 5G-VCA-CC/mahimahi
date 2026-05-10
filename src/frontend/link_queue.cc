@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <cassert>
+#include <iostream>
 #include <netinet/ip.h>
 
 #include "link_queue.hh"
@@ -20,6 +21,10 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
     : next_delivery_( 0 ),
       schedule_(),
       base_timestamp_( timestamp() ),
+      subtick_offsets_us_(),
+      subtick_opportunities_(),
+      cycle_duration_us_( 0 ),
+      base_timestamp_us_( timestamp_us() ),
       packet_queue_( move( packet_queue ) ),
       packet_in_transit_( "", 0 ),
       packet_in_transit_bytes_left_( 0 ),
@@ -63,6 +68,44 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
 
     if ( schedule_.back() == 0 ) {
         throw runtime_error( filename + ": trace must last for a nonzero amount of time" );
+    }
+
+    cycle_duration_us_ = schedule_.back() * 1000;
+
+    /* build 250 us sub-tick opportunities for each trace millisecond */
+    for ( size_t i = 0; i < schedule_.size(); ) {
+        const uint64_t ms = schedule_.at( i );
+        size_t j = i;
+        while ( j < schedule_.size() and schedule_.at( j ) == ms ) {
+            j++;
+        }
+
+        const unsigned int opportunities = j - i;
+        const unsigned int base = opportunities / SUBTICKS_PER_MS;
+        const unsigned int remainder = opportunities % SUBTICKS_PER_MS;
+
+        for ( unsigned int subtick = 0; subtick < SUBTICKS_PER_MS; subtick++ ) {
+            const unsigned int subtick_opportunities = base + ( subtick < remainder ? 1 : 0 );
+            if ( subtick_opportunities == 0 ) {
+                continue;
+            }
+
+            uint64_t subtick_offset_us = 0;
+            if ( ms == 0 ) {
+                subtick_offset_us = subtick * SUBTICK_US;
+            } else {
+                subtick_offset_us = ( ms - 1 ) * 1000 + ( subtick + 1 ) * SUBTICK_US;
+            }
+
+            subtick_offsets_us_.emplace_back( subtick_offset_us );
+            subtick_opportunities_.emplace_back( subtick_opportunities );
+        }
+
+        i = j;
+    }
+
+    if ( subtick_offsets_us_.empty() ) {
+        throw runtime_error( filename + ": no valid departure opportunities found" );
     }
 
     /* open logfile if called for */
@@ -227,14 +270,15 @@ void LinkQueue::record_departure( const uint64_t departure_time, const QueuedPac
 
 void LinkQueue::read_packet( const string & contents )
 {
-    const uint64_t now = timestamp();
     const uint64_t now_ns = timestamp_ns();
+    const uint64_t now_us = now_ns / 1000;
+    const uint64_t now = now_ns / 1000000;
 
     if ( contents.size() > PACKET_SIZE ) {
         throw runtime_error( "packet size is greater than maximum" );
     }
 
-    rationalize( now );
+    rationalize( now_us );
 
     record_arrival( now, contents.size() );
 
@@ -258,20 +302,32 @@ uint64_t LinkQueue::next_delivery_time( void ) const
     if ( finished_ ) {
         return -1;
     } else {
-        return schedule_.at( next_delivery_ ) + base_timestamp_;
+        return next_subtick_time_us() / 1000;
+    }
+}
+
+uint64_t LinkQueue::next_subtick_time_us( void ) const
+{
+    if ( finished_ ) {
+        return -1;
+    } else {
+        return base_timestamp_us_ + subtick_offsets_us_.at( next_delivery_ );
     }
 }
 
 void LinkQueue::use_a_delivery_opportunity( void )
 {
     record_departure_opportunity();
+}
 
-    next_delivery_ = (next_delivery_ + 1) % schedule_.size();
+void LinkQueue::advance_subtick( void )
+{
+    next_delivery_ = ( next_delivery_ + 1 ) % subtick_offsets_us_.size();
 
     /* wraparound */
     if ( next_delivery_ == 0 ) {
         if ( repeat_ ) {
-            base_timestamp_ += schedule_.back();
+            base_timestamp_us_ += cycle_duration_us_;
         } else {
             finished_ = true;
         }
@@ -283,43 +339,54 @@ void LinkQueue::use_a_delivery_opportunity( void )
    calculating the wait_time until the next event */
 void LinkQueue::rationalize( const uint64_t now )
 {
-    while ( next_delivery_time() <= now ) {
+    while ( next_subtick_time_us() <= now ) {
+        const uint64_t this_delivery_time_us = next_subtick_time_us();
         const uint64_t this_delivery_time = next_delivery_time();
+        const unsigned int opportunities_this_subtick = subtick_opportunities_.at( next_delivery_ );
 
-        /* burn a delivery opportunity */
-        unsigned int bytes_left_in_this_delivery = PACKET_SIZE;
-        use_a_delivery_opportunity();
+        for ( unsigned int i = 0; i < opportunities_this_subtick; i++ ) {
+            /* burn a delivery opportunity */
+            unsigned int bytes_left_in_this_delivery = PACKET_SIZE;
+            use_a_delivery_opportunity();
 
-        while ( bytes_left_in_this_delivery > 0 ) {
-            if ( not packet_in_transit_bytes_left_ ) {
-                if ( packet_queue_->empty() ) {
-                    break;
+            while ( bytes_left_in_this_delivery > 0 ) {
+                if ( not packet_in_transit_bytes_left_ ) {
+                    if ( packet_queue_->empty() ) {
+                        break;
+                    }
+                    packet_in_transit_ = packet_queue_->dequeue();
+                    packet_in_transit_bytes_left_ = packet_in_transit_.contents.size();
+
+                    /* Debug print: timestamp each packet dequeue event at 250 us granularity. */
+                    cerr << "[mm-link dequeue] time_us=" << this_delivery_time_us
+                         << " size=" << packet_in_transit_.contents.size()
+                         << endl;
                 }
-                packet_in_transit_ = packet_queue_->dequeue();
-                packet_in_transit_bytes_left_ = packet_in_transit_.contents.size();
-            }
 
-            assert( packet_in_transit_.arrival_time <= this_delivery_time );
-            assert( packet_in_transit_bytes_left_ <= PACKET_SIZE );
-            assert( packet_in_transit_bytes_left_ > 0 );
-            assert( packet_in_transit_bytes_left_ <= packet_in_transit_.contents.size() );
+                assert( packet_in_transit_.arrival_time <= this_delivery_time );
+                assert( packet_in_transit_bytes_left_ <= PACKET_SIZE );
+                assert( packet_in_transit_bytes_left_ > 0 );
+                assert( packet_in_transit_bytes_left_ <= packet_in_transit_.contents.size() );
 
-            /* how many bytes of the delivery opportunity can we use? */
-            const unsigned int amount_to_send = min( bytes_left_in_this_delivery,
-                                                     packet_in_transit_bytes_left_ );
+                /* how many bytes of the delivery opportunity can we use? */
+                const unsigned int amount_to_send = min( bytes_left_in_this_delivery,
+                                                         packet_in_transit_bytes_left_ );
 
-            /* send that many bytes */
-            packet_in_transit_bytes_left_ -= amount_to_send;
-            bytes_left_in_this_delivery -= amount_to_send;
+                /* send that many bytes */
+                packet_in_transit_bytes_left_ -= amount_to_send;
+                bytes_left_in_this_delivery -= amount_to_send;
 
-            /* has the packet been fully sent? */
-            if ( packet_in_transit_bytes_left_ == 0 ) {
-                record_departure( this_delivery_time, packet_in_transit_ );
+                /* has the packet been fully sent? */
+                if ( packet_in_transit_bytes_left_ == 0 ) {
+                    record_departure( this_delivery_time, packet_in_transit_ );
 
-                /* this packet is ready to go */
-                output_queue_.push( move( packet_in_transit_.contents ) );
+                    /* this packet is ready to go */
+                    output_queue_.push( move( packet_in_transit_.contents ) );
+                }
             }
         }
+
+        advance_subtick();
     }
 }
 
@@ -333,14 +400,15 @@ void LinkQueue::write_packets( FileDescriptor & fd )
 
 unsigned int LinkQueue::wait_time( void )
 {
-    const auto now = timestamp();
+    const auto now = timestamp_us();
 
     rationalize( now );
 
-    if ( next_delivery_time() <= now ) {
+    if ( next_subtick_time_us() <= now ) {
         return 0;
     } else {
-        return next_delivery_time() - now;
+        const uint64_t wait_us = next_subtick_time_us() - now;
+        return ( wait_us + 999 ) / 1000;
     }
 }
 

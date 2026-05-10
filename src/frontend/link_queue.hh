@@ -17,10 +17,16 @@ class LinkQueue
 {
 private:
     const static unsigned int PACKET_SIZE = 1504; /* default max TUN payload size */
+    const static unsigned int SUBTICKS_PER_MS = 4;
+    const static uint64_t SUBTICK_US = 250;
 
     unsigned int next_delivery_;
     std::vector<uint64_t> schedule_;
     uint64_t base_timestamp_;
+    std::vector<uint64_t> subtick_offsets_us_;
+    std::vector<unsigned int> subtick_opportunities_;
+    uint64_t cycle_duration_us_;
+    uint64_t base_timestamp_us_;
 
     std::unique_ptr<AbstractPacketQueue> packet_queue_;
     QueuedPacket packet_in_transit_;
@@ -35,8 +41,10 @@ private:
     bool finished_;
 
     uint64_t next_delivery_time( void ) const;
+    uint64_t next_subtick_time_us( void ) const;
 
     void use_a_delivery_opportunity( void );
+    void advance_subtick( void );
 
     void record_arrival( const uint64_t arrival_time, const size_t pkt_size );
     void record_drop( const uint64_t time, const size_t pkts_dropped, const size_t bytes_dropped );

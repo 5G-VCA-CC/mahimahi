@@ -8,6 +8,9 @@
 uint64_t timestamp( void );
 uint64_t initial_timestamp( void );
 
+uint64_t timestamp_us( void );
+uint64_t initial_timestamp_us( void );
+
 uint64_t timestamp_ns( void );
 uint64_t initial_timestamp_ns( void );
 

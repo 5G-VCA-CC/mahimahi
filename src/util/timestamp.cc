@@ -5,29 +5,30 @@
 #include "timestamp.hh"
 #include "exception.hh"
 
-uint64_t raw_timestamp( void )
-{
-    timespec ts;
-    SystemCall( "clock_gettime", clock_gettime( CLOCK_REALTIME, &ts ) );
-
-    uint64_t millis = ts.tv_nsec / 1000000;
-    millis += uint64_t( ts.tv_sec ) * 1000;
-
-    return millis;
+namespace {
+    const uint64_t NS_PER_US = 1000;
+    const uint64_t NS_PER_MS = 1000000;
 }
 
 uint64_t initial_timestamp( void )
 {
-    static uint64_t initial_value = raw_timestamp();
-    return initial_value;
+    return initial_timestamp_ns() / NS_PER_MS;
 }
 
 uint64_t timestamp( void )
 {
-    return raw_timestamp() - initial_timestamp();
+    return timestamp_ns() / NS_PER_MS;
 }
 
-/* Same in ns */
+uint64_t initial_timestamp_us( void )
+{
+    return initial_timestamp_ns() / NS_PER_US;
+}
+
+uint64_t timestamp_us( void )
+{
+    return timestamp_ns() / NS_PER_US;
+}
 
 uint64_t raw_timestamp_ns( void )
 {
