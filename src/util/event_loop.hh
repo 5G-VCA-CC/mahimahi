@@ -23,7 +23,7 @@ private:
 protected:
     void add_action( Poller::Action action ) { poller_.add_action( action ); }
 
-    int internal_loop( const std::function<int(void)> & wait_time );
+    int internal_loop( const std::function<int(void)> & wait_time_us );
 
     virtual void handle_sigusr1() {}
 

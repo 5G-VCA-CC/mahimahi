@@ -12,18 +12,18 @@
 class DelayQueue
 {
 private:
-    uint64_t delay_ms_;
+    uint64_t delay_us_;
     std::queue< std::pair<uint64_t, std::string> > packet_queue_;
     /* release timestamp, contents */
 
 public:
-    DelayQueue( const uint64_t & s_delay_ms ) : delay_ms_( s_delay_ms ), packet_queue_() {}
+    DelayQueue( const uint64_t & s_delay_ms ) : delay_us_( s_delay_ms * 1000 ), packet_queue_() {}
 
     void read_packet( const std::string & contents );
 
     void write_packets( FileDescriptor & fd );
 
-    unsigned int wait_time( void ) const;
+    int wait_time( void ) const;
 
     bool pending_output( void ) const { return wait_time() <= 0; }
 

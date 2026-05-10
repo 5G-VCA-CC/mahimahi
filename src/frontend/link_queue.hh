@@ -67,7 +67,7 @@ public:
 
     void write_packets( FileDescriptor & fd );
 
-    unsigned int wait_time( void );
+    int wait_time( void );
 
     bool pending_output( void ) const;
 

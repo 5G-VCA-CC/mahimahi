@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <numeric>
+#include <limits>
+#include <time.h>
 #include "poller.hh"
 #include "exception.hh"
 
@@ -19,7 +21,7 @@ unsigned int Poller::Action::service_count( void ) const
     return direction == Direction::In ? fd.read_count() : fd.write_count();
 }
 
-Poller::Result Poller::poll( const int & timeout_ms )
+Poller::Result Poller::poll_us( const int & timeout_us )
 {
     assert( pollfds_.size() == actions_.size() );
 
@@ -42,7 +44,16 @@ Poller::Result Poller::poll( const int & timeout_ms )
         return Result::Type::Exit;
     }
 
-    if ( 0 == SystemCall( "poll", ::poll( &pollfds_[ 0 ], pollfds_.size(), timeout_ms ) ) ) {
+    timespec timeout {};
+    timespec * timeout_ptr = nullptr;
+
+    if ( timeout_us >= 0 ) {
+        timeout.tv_sec = timeout_us / 1000000;
+        timeout.tv_nsec = ( timeout_us % 1000000 ) * 1000;
+        timeout_ptr = &timeout;
+    }
+
+    if ( 0 == SystemCall( "ppoll", ::ppoll( &pollfds_[ 0 ], pollfds_.size(), timeout_ptr, nullptr ) ) ) {
         return Result::Type::Timeout;
     }
 
@@ -75,4 +86,17 @@ Poller::Result Poller::poll( const int & timeout_ms )
     }
 
     return Result::Type::Success;
+}
+
+Poller::Result Poller::poll( const int & timeout_ms )
+{
+    if ( timeout_ms < 0 ) {
+        return poll_us( timeout_ms );
+    }
+
+    if ( timeout_ms > numeric_limits<int>::max() / 1000 ) {
+        return poll_us( numeric_limits<int>::max() );
+    }
+
+    return poll_us( timeout_ms * 1000 );
 }

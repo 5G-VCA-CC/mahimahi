@@ -57,6 +57,7 @@ public:
 
     Poller() : actions_(), pollfds_() {}
     void add_action( Action action );
+    Result poll_us( const int & timeout_us );
     Result poll( const int & timeout_ms );
 };
 

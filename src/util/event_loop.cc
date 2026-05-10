@@ -84,7 +84,7 @@ Result EventLoop::handle_signal( const signalfd_siginfo & sig )
     return ResultType::Continue;
 }
 
-int EventLoop::internal_loop( const std::function<int(void)> & wait_time )
+int EventLoop::internal_loop( const std::function<int(void)> & wait_time_us )
 {
     TemporarilyUnprivileged tu;
 
@@ -102,7 +102,7 @@ int EventLoop::internal_loop( const std::function<int(void)> & wait_time )
                               [&] () { return handle_signal( signal_fd.read_signal() ); } );
 
     while ( true ) {
-        const auto poll_result = poller_.poll( wait_time() );
+        const auto poll_result = poller_.poll_us( wait_time_us() );
         if ( poll_result.result == Poller::Result::Type::Exit ) {
             return poll_result.exit_status;
         }

@@ -398,7 +398,7 @@ void LinkQueue::write_packets( FileDescriptor & fd )
     }
 }
 
-unsigned int LinkQueue::wait_time( void )
+int LinkQueue::wait_time( void )
 {
     const auto now = timestamp_us();
 
@@ -408,7 +408,10 @@ unsigned int LinkQueue::wait_time( void )
         return 0;
     } else {
         const uint64_t wait_us = next_subtick_time_us() - now;
-        return ( wait_us + 999 ) / 1000;
+        if ( wait_us > static_cast<uint64_t>( numeric_limits<int>::max() ) ) {
+            return numeric_limits<int>::max();
+        }
+        return wait_us;
     }
 }
 

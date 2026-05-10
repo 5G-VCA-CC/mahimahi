@@ -27,9 +27,9 @@ void LossQueue::write_packets( FileDescriptor & fd )
     }
 }
 
-unsigned int LossQueue::wait_time( void )
+int LossQueue::wait_time( void )
 {
-    return packet_queue_.empty() ? numeric_limits<uint16_t>::max() : 0;
+    return packet_queue_.empty() ? numeric_limits<int>::max() : 0;
 }
 
 bool IIDLoss::drop_packet( const string & packet __attribute((unused)) )
@@ -37,27 +37,29 @@ bool IIDLoss::drop_packet( const string & packet __attribute((unused)) )
     return drop_dist_( prng_ );
 }
 
-static const double MS_PER_SECOND = 1000.0;
+static const double US_PER_SECOND = 1000000.0;
 
 StochasticSwitchingLink::StochasticSwitchingLink( const double mean_on_time, const double mean_off_time )
     : link_is_on_( false ),
-      on_process_( 1.0 / (MS_PER_SECOND * mean_off_time) ),
-      off_process_( 1.0 / (MS_PER_SECOND * mean_on_time) ),
-      next_switch_time_( timestamp() )
+      on_process_( 1.0 / (US_PER_SECOND * mean_off_time) ),
+      off_process_( 1.0 / (US_PER_SECOND * mean_on_time) ),
+      next_switch_time_( timestamp_us() )
 {}
 
 uint64_t bound( const double x )
 {
-    if ( x > (1 << 30) ) {
-        return 1 << 30;
+    constexpr uint64_t MAX_BOUNDED_INTERVAL_US = ( static_cast<uint64_t>( 1 ) << 30 ) * 1000;
+
+    if ( x > MAX_BOUNDED_INTERVAL_US ) {
+        return MAX_BOUNDED_INTERVAL_US;
     }
 
     return x;
 }
 
-unsigned int StochasticSwitchingLink::wait_time( void )
+int StochasticSwitchingLink::wait_time( void )
 {
-    const uint64_t now = timestamp();
+    const uint64_t now = timestamp_us();
 
     while ( next_switch_time_ <= now ) {
         /* switch */
@@ -70,8 +72,8 @@ unsigned int StochasticSwitchingLink::wait_time( void )
         return 0;
     }
 
-    if ( next_switch_time_ - now > numeric_limits<uint16_t>::max() ) {
-        return numeric_limits<uint16_t>::max();
+    if ( next_switch_time_ - now > static_cast<uint64_t>( numeric_limits<int>::max() ) ) {
+        return numeric_limits<int>::max();
     }
 
     return next_switch_time_ - now;
@@ -84,18 +86,18 @@ bool StochasticSwitchingLink::drop_packet( const string & packet __attribute((un
 
 PeriodicSwitchingLink::PeriodicSwitchingLink( const double on_time, const double off_time )
     : link_is_on_( false ),
-      on_time_( bound( MS_PER_SECOND * on_time ) ),
-      off_time_( bound( MS_PER_SECOND * off_time ) ),
-      next_switch_time_( timestamp() )
+      on_time_( bound( US_PER_SECOND * on_time ) ),
+      off_time_( bound( US_PER_SECOND * off_time ) ),
+      next_switch_time_( timestamp_us() )
 {
   if ( on_time_ == 0 and off_time_ == 0 ) {
       throw runtime_error( "on_time and off_time cannot both be zero" );
   }
 }
 
-unsigned int PeriodicSwitchingLink::wait_time( void )
+int PeriodicSwitchingLink::wait_time( void )
 {
-    const uint64_t now = timestamp();
+    const uint64_t now = timestamp_us();
 
     while ( next_switch_time_ <= now ) {
         /* switch */
@@ -107,8 +109,8 @@ unsigned int PeriodicSwitchingLink::wait_time( void )
         return 0;
     }
 
-    if ( next_switch_time_ - now > numeric_limits<uint16_t>::max() ) {
-        return numeric_limits<uint16_t>::max();
+    if ( next_switch_time_ - now > static_cast<uint64_t>( numeric_limits<int>::max() ) ) {
+        return numeric_limits<int>::max();
     }
 
     return next_switch_time_ - now;

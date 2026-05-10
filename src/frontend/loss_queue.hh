@@ -28,7 +28,7 @@ public:
 
     void write_packets( FileDescriptor & fd );
 
-    unsigned int wait_time( void );
+    int wait_time( void );
 
     bool pending_output( void ) const { return not packet_queue_.empty(); }
 
@@ -60,7 +60,7 @@ private:
 public:
     StochasticSwitchingLink( const double mean_on_time_, const double mean_off_time );
 
-    unsigned int wait_time( void );
+    int wait_time( void );
 };
 
 class PeriodicSwitchingLink : public LossQueue
@@ -74,7 +74,7 @@ private:
 public:
     PeriodicSwitchingLink( const double on_time, const double off_time );
 
-    unsigned int wait_time( void );
+    int wait_time( void );
 };
 
 #endif /* LOSS_QUEUE_HH */
