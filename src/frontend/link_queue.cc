@@ -2,7 +2,6 @@
 
 #include <limits>
 #include <cassert>
-#include <iostream>
 #include <netinet/ip.h>
 
 #include "link_queue.hh"
@@ -340,7 +339,6 @@ void LinkQueue::advance_subtick( void )
 void LinkQueue::rationalize( const uint64_t now )
 {
     while ( next_subtick_time_us() <= now ) {
-        const uint64_t this_delivery_time_us = next_subtick_time_us();
         const uint64_t this_delivery_time = next_delivery_time();
         const unsigned int opportunities_this_subtick = subtick_opportunities_.at( next_delivery_ );
 
@@ -356,11 +354,6 @@ void LinkQueue::rationalize( const uint64_t now )
                     }
                     packet_in_transit_ = packet_queue_->dequeue();
                     packet_in_transit_bytes_left_ = packet_in_transit_.contents.size();
-
-                    /* Debug print: timestamp each packet dequeue event at 250 us granularity. */
-                    cerr << "[mm-link dequeue] time_us=" << this_delivery_time_us
-                         << " size=" << packet_in_transit_.contents.size()
-                         << endl;
                 }
 
                 assert( packet_in_transit_.arrival_time <= this_delivery_time );
