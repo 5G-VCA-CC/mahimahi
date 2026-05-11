@@ -169,7 +169,12 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
 
-                l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
+                //l4s_qdelay_ns = l4s_queue_.qdelay_in_ns( now );
+
+                std::cout << "Packet qdelay with enqueue time: " << std::to_string(now - pkt.enqueue_time_ns) << std::endl;
+                std::cout << "Packet qdelay with arrival time: " << std::to_string(now - pkt.arrival_time_ns) << std::endl;
+
+                l4s_qdelay_ns = now - pkt.enqueue_time_ns;
                 pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns );
 
                 p_l_ = max(pp_l_, p_cl_);
