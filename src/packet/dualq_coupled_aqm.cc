@@ -173,6 +173,8 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
 
                 std::cout << "Packet qdelay with enqueue time: " << std::to_string(now - pkt.enqueue_time_ns) << std::endl;
                 std::cout << "Packet qdelay with arrival time: " << std::to_string(now - pkt.arrival_time_ns) << std::endl;
+                std::cout << "L4S head of queue qdelay: " << std::to_string(l4s_queue_.qdelay_in_ns( now )) << std::endl;
+                std::cout << "L4S queue size: " << std::to_string(l4s_queue_.size_packets()) << std::endl;
 
                 l4s_qdelay_ns = now - pkt.enqueue_time_ns;
                 pp_l_ = l4s_queue_.calculate_l4s_native_prob( l4s_qdelay_ns );
