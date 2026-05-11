@@ -83,7 +83,8 @@ uint64_t AbstractDualPI2PacketQueue::qdelay_in_ns ( uint64_t ref )
     if ( internal_queue_.empty() ) return 0;
     
     QueuedPacket& head = peek();
-    return ref - head.arrival_time_ns;
+    //return ref - head.arrival_time_ns;
+    return ref - head.enqueue_time_ns;
 }
 
 // Utilities
