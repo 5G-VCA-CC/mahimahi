@@ -83,7 +83,7 @@ void DualQCoupledAQM::enqueue( QueuedPacket && p )
     poller_.poll( 0 );
 
 
-    std::cout << "> Packet size (enqueue): " << std::to_string(p.contents.size()) << std::endl;
+    //std::cout << "> Packet size (enqueue): " << std::to_string(p.contents.size()) << std::endl;
     if ( size_bytes() + MTU > byte_limit_) {
         drop (DropReason::Overflow);
         return;
@@ -120,10 +120,10 @@ QueuedPacket DualQCoupledAQM::dequeue( void )
         if ( dequeue_from == QueueType::L4S ) {
             pkt = l4s_queue_.dequeue();
 
-            std::cout << "Packet size bytes (dequeue): " << std::to_string(pkt.contents.size()) << std::endl;
-            std::cout << "Packet arrival time ns: " << std::to_string(pkt.arrival_time_ns) << std::endl;
-            std::cout << "Packet enqueue time ns: " << std::to_string(pkt.enqueue_time_ns) << std::endl;
-            std::cout << "Diff: " << std::to_string(pkt.enqueue_time_ns - pkt.arrival_time_ns) << std::endl << std::endl;
+            // std::cout << "Packet size bytes (dequeue): " << std::to_string(pkt.contents.size()) << std::endl;
+            // std::cout << "Packet arrival time ns: " << std::to_string(pkt.arrival_time_ns) << std::endl;
+            // std::cout << "Packet enqueue time ns: " << std::to_string(pkt.enqueue_time_ns) << std::endl;
+            // std::cout << "Diff: " << std::to_string(pkt.enqueue_time_ns - pkt.arrival_time_ns) << std::endl << std::endl;
             
             if ( not is_overloaded() ) {
                 now = timestamp_ns();
