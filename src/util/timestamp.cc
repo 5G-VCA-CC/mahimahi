@@ -33,7 +33,7 @@ uint64_t timestamp_us( void )
 uint64_t raw_timestamp_ns( void )
 {
     timespec ts;
-    SystemCall( "clock_gettime", clock_gettime( CLOCK_REALTIME, &ts ) );
+    SystemCall( "clock_gettime", clock_gettime( CLOCK_MONOTONIC, &ts ) );
 
     return ts.tv_nsec + uint64_t( ts.tv_sec ) * 1000000000;
 }
