@@ -37,6 +37,9 @@ private:
     std::unique_ptr<BinnedLiveGraph> throughput_graph_;
     std::unique_ptr<BinnedLiveGraph> delay_graph_;
 
+    bool mmdbg_timing_enabled_;
+    uint64_t mmdbg_wait_call_counter_;
+
     bool repeat_;
     bool finished_;
 

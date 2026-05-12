@@ -16,7 +16,7 @@
 using namespace std;
 
 namespace {
-bool mmdbg_timing_enabled( void )
+bool mmdbg_timing_requested( void )
 {
     static const bool enabled = getenv( "MAHIMAHI_MMDBG_TIMING" ) != nullptr;
     return enabled;
@@ -24,7 +24,7 @@ bool mmdbg_timing_enabled( void )
 
 void mmdbg_log( const string & line )
 {
-    if ( mmdbg_timing_enabled() ) {
+    if ( mmdbg_timing_requested() ) {
         cerr << line << endl;
     }
 }
@@ -48,6 +48,8 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
       log_(),
       throughput_graph_( nullptr ),
       delay_graph_( nullptr ),
+      mmdbg_timing_enabled_( false ),
+      mmdbg_wait_call_counter_( 0 ),
       repeat_( repeat ),
       finished_( false )
 {
@@ -123,6 +125,8 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
     if ( subtick_offsets_us_.empty() ) {
         throw runtime_error( filename + ": no valid departure opportunities found" );
     }
+
+    mmdbg_timing_enabled_ = mmdbg_timing_requested() and ( link_name == "Uplink" );
 
     /* open logfile if called for */
     if ( not logfile.empty() ) {
@@ -407,7 +411,7 @@ void LinkQueue::rationalize( const uint64_t now )
         subticks_processed++;
     }
 
-    if ( mmdbg_timing_enabled() ) {
+    if ( mmdbg_timing_enabled_ ) {
         const uint64_t end_us = timestamp_us();
         const size_t output_after = output_queue_.size();
         const size_t promoted = output_after >= output_before ? output_after - output_before : 0;
@@ -443,7 +447,7 @@ void LinkQueue::write_packets( FileDescriptor & fd )
         popped++;
     }
 
-    if ( mmdbg_timing_enabled() and popped > 0 ) {
+    if ( mmdbg_timing_enabled_ and popped > 0 ) {
         const uint64_t end_us = timestamp_us();
         mmdbg_log( "MMDBG component=LinkQueue fn=write_packets"
                    " start_us=" + to_string( start_us ) +
@@ -456,8 +460,7 @@ void LinkQueue::write_packets( FileDescriptor & fd )
 
 int LinkQueue::wait_time( void )
 {
-    static uint64_t wait_call_counter = 0;
-    wait_call_counter++;
+    mmdbg_wait_call_counter_++;
 
     const auto now = timestamp_us();
     const uint64_t next_before = next_subtick_time_us();
@@ -478,7 +481,7 @@ int LinkQueue::wait_time( void )
         }
     }
 
-    if ( mmdbg_timing_enabled() ) {
+    if ( mmdbg_timing_enabled_ ) {
         const uint64_t invalid_next = numeric_limits<uint64_t>::max();
         const uint64_t lateness_before = ( next_before != invalid_next and now > next_before )
             ? now - next_before
@@ -487,9 +490,9 @@ int LinkQueue::wait_time( void )
             or ( output_before > 0 )
             or ( output_queue_.size() > 0 )
             or ( lateness_before > 0 );
-        if ( interesting or ( wait_call_counter % 1024 == 0 ) ) {
+        if ( interesting or ( mmdbg_wait_call_counter_ % 4096 == 0 ) ) {
             mmdbg_log( "MMDBG component=LinkQueue fn=wait_time"
-                       " call_idx=" + to_string( wait_call_counter ) +
+                       " call_idx=" + to_string( mmdbg_wait_call_counter_ ) +
                        " now_us=" + to_string( now ) +
                        " next_before_us=" + to_string( next_before ) +
                        " next_after_us=" + to_string( next_after ) +

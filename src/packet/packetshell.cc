@@ -30,6 +30,12 @@ bool mmdbg_timing_enabled( void )
     return enabled;
 }
 
+bool mmdbg_core_enabled( void )
+{
+    static const bool enabled = getenv( "MAHIMAHI_MMDBG_CORE" ) != nullptr;
+    return enabled;
+}
+
 void mmdbg_log( const string & line )
 {
     if ( mmdbg_timing_enabled() ) {
@@ -206,7 +212,7 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
                                 [&] () {
                                     const uint64_t start_us = timestamp_us();
                                     ferry_queue.write_packets( sibling );
-                                    if ( mmdbg_timing_enabled() ) {
+                                    if ( mmdbg_core_enabled() ) {
                                         const uint64_t end_us = timestamp_us();
                                         mmdbg_log( "MMDBG component=Ferry fn=sibling_out_callback"
                                                    " start_us=" + to_string( start_us ) +
@@ -216,7 +222,7 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
                                 },
                                 [&] () {
                                     const bool interested = (!passthrough_) and ferry_queue.pending_output();
-                                    if ( mmdbg_timing_enabled() and interested and !sibling_was_interested ) {
+                                    if ( mmdbg_core_enabled() and interested and !sibling_was_interested ) {
                                         sibling_interest_false_to_true_count++;
                                         mmdbg_log( "MMDBG component=Ferry fn=sibling_out_interest_transition"
                                                    " transition=false_to_true"
@@ -237,11 +243,11 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
     return internal_loop( [&] () {
             const uint64_t start_us = timestamp_us();
             const int wait_us = ferry_queue.wait_time();
-            if ( mmdbg_timing_enabled() ) {
+            if ( mmdbg_core_enabled() ) {
                 const uint64_t end_us = timestamp_us();
                 static uint64_t timeout_call_idx = 0;
                 timeout_call_idx++;
-                if ( wait_us == 0 or ( timeout_call_idx % 1024 == 0 ) ) {
+                if ( wait_us == 0 or ( timeout_call_idx % 4096 == 0 ) ) {
                     mmdbg_log( "MMDBG component=Ferry fn=timeout_lambda"
                                " call_idx=" + to_string( timeout_call_idx ) +
                                " start_us=" + to_string( start_us ) +

@@ -18,6 +18,12 @@ bool mmdbg_timing_enabled( void )
     return enabled;
 }
 
+bool mmdbg_core_enabled( void )
+{
+    static const bool enabled = getenv( "MAHIMAHI_MMDBG_CORE" ) != nullptr;
+    return enabled;
+}
+
 void mmdbg_log( const string & line )
 {
     if ( mmdbg_timing_enabled() ) {
@@ -125,12 +131,12 @@ int EventLoop::internal_loop( const std::function<int(void)> & wait_time_us )
         const auto poll_result = poller_.poll_us( requested_timeout_us );
         const uint64_t poll_end_us = timestamp_us();
 
-        if ( mmdbg_timing_enabled() ) {
+        if ( mmdbg_core_enabled() ) {
             static uint64_t loop_idx = 0;
             loop_idx++;
             if ( requested_timeout_us == 0
                  or poll_result.result == Poller::Result::Type::Timeout
-                 or ( loop_idx % 1024 == 0 ) ) {
+                 or ( loop_idx % 4096 == 0 ) ) {
                 string result_name = "Success";
                 if ( poll_result.result == Poller::Result::Type::Timeout ) {
                     result_name = "Timeout";
