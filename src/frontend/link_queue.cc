@@ -2,6 +2,8 @@
 
 #include <limits>
 #include <cassert>
+#include <cstdlib>
+#include <iostream>
 #include <netinet/ip.h>
 
 #include "link_queue.hh"
@@ -12,6 +14,21 @@
 #include "dualq_coupled_aqm.hh"
 
 using namespace std;
+
+namespace {
+bool mmdbg_timing_enabled( void )
+{
+    static const bool enabled = getenv( "MAHIMAHI_MMDBG_TIMING" ) != nullptr;
+    return enabled;
+}
+
+void mmdbg_log( const string & line )
+{
+    if ( mmdbg_timing_enabled() ) {
+        cerr << line << endl;
+    }
+}
+}
 
 LinkQueue::LinkQueue( const string & link_name, const string & filename, const string & logfile,
                       const bool repeat, const bool graph_throughput, const bool graph_delay,
@@ -338,9 +355,16 @@ void LinkQueue::advance_subtick( void )
    calculating the wait_time until the next event */
 void LinkQueue::rationalize( const uint64_t now )
 {
+    const uint64_t start_us = timestamp_us();
+    const uint64_t next_subtick_before = next_subtick_time_us();
+    const size_t output_before = output_queue_.size();
+    size_t subticks_processed = 0;
+    size_t opportunities_processed = 0;
+
     while ( next_subtick_time_us() <= now ) {
         const uint64_t this_delivery_time = next_delivery_time();
         const unsigned int opportunities_this_subtick = subtick_opportunities_.at( next_delivery_ );
+        opportunities_processed += opportunities_this_subtick;
 
         for ( unsigned int i = 0; i < opportunities_this_subtick; i++ ) {
             /* burn a delivery opportunity */
@@ -380,32 +404,103 @@ void LinkQueue::rationalize( const uint64_t now )
         }
 
         advance_subtick();
+        subticks_processed++;
+    }
+
+    if ( mmdbg_timing_enabled() ) {
+        const uint64_t end_us = timestamp_us();
+        const size_t output_after = output_queue_.size();
+        const size_t promoted = output_after >= output_before ? output_after - output_before : 0;
+        const uint64_t invalid_next = numeric_limits<uint64_t>::max();
+        const uint64_t lateness_us = ( next_subtick_before != invalid_next and now > next_subtick_before )
+            ? now - next_subtick_before
+            : 0;
+
+        if ( subticks_processed > 0 or opportunities_processed > 0 or promoted > 0 or lateness_us > 0 ) {
+            mmdbg_log( "MMDBG component=LinkQueue fn=rationalize"
+                       " now_us=" + to_string( now ) +
+                       " start_us=" + to_string( start_us ) +
+                       " dur_us=" + to_string( end_us - start_us ) +
+                       " lateness_us=" + to_string( lateness_us ) +
+                       " subticks_processed=" + to_string( subticks_processed ) +
+                       " opportunities_processed=" + to_string( opportunities_processed ) +
+                       " output_before=" + to_string( output_before ) +
+                       " output_after=" + to_string( output_after ) +
+                       " promoted=" + to_string( promoted ) );
+        }
     }
 }
 
 void LinkQueue::write_packets( FileDescriptor & fd )
 {
+    const uint64_t start_us = timestamp_us();
+    const size_t output_before = output_queue_.size();
+    size_t popped = 0;
+
     while ( not output_queue_.empty() ) {
         fd.write( output_queue_.front() );
         output_queue_.pop();
+        popped++;
+    }
+
+    if ( mmdbg_timing_enabled() and popped > 0 ) {
+        const uint64_t end_us = timestamp_us();
+        mmdbg_log( "MMDBG component=LinkQueue fn=write_packets"
+                   " start_us=" + to_string( start_us ) +
+                   " dur_us=" + to_string( end_us - start_us ) +
+                   " output_before=" + to_string( output_before ) +
+                   " popped=" + to_string( popped ) +
+                   " output_after=" + to_string( output_queue_.size() ) );
     }
 }
 
 int LinkQueue::wait_time( void )
 {
+    static uint64_t wait_call_counter = 0;
+    wait_call_counter++;
+
     const auto now = timestamp_us();
+    const uint64_t next_before = next_subtick_time_us();
+    const size_t output_before = output_queue_.size();
 
     rationalize( now );
 
+    const uint64_t next_after = next_subtick_time_us();
+    int ret = 0;
     if ( next_subtick_time_us() <= now ) {
-        return 0;
+        ret = 0;
     } else {
         const uint64_t wait_us = next_subtick_time_us() - now;
         if ( wait_us > static_cast<uint64_t>( numeric_limits<int>::max() ) ) {
-            return numeric_limits<int>::max();
+            ret = numeric_limits<int>::max();
+        } else {
+            ret = wait_us;
         }
-        return wait_us;
     }
+
+    if ( mmdbg_timing_enabled() ) {
+        const uint64_t invalid_next = numeric_limits<uint64_t>::max();
+        const uint64_t lateness_before = ( next_before != invalid_next and now > next_before )
+            ? now - next_before
+            : 0;
+        const bool interesting = ( ret == 0 )
+            or ( output_before > 0 )
+            or ( output_queue_.size() > 0 )
+            or ( lateness_before > 0 );
+        if ( interesting or ( wait_call_counter % 1024 == 0 ) ) {
+            mmdbg_log( "MMDBG component=LinkQueue fn=wait_time"
+                       " call_idx=" + to_string( wait_call_counter ) +
+                       " now_us=" + to_string( now ) +
+                       " next_before_us=" + to_string( next_before ) +
+                       " next_after_us=" + to_string( next_after ) +
+                       " output_before=" + to_string( output_before ) +
+                       " output_after=" + to_string( output_queue_.size() ) +
+                       " lateness_before_us=" + to_string( lateness_before ) +
+                       " ret_wait_us=" + to_string( ret ) );
+        }
+    }
+
+    return ret;
 }
 
 bool LinkQueue::pending_output( void ) const

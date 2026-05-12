@@ -1,12 +1,30 @@
 /* -*-mode:c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 #include <algorithm>
+#include <cstdlib>
+#include <iostream>
 
 #include "event_loop.hh"
 #include "exception.hh"
+#include "timestamp.hh"
 
 using namespace std;
 using namespace PollerShortNames;
+
+namespace {
+bool mmdbg_timing_enabled( void )
+{
+    static const bool enabled = getenv( "MAHIMAHI_MMDBG_TIMING" ) != nullptr;
+    return enabled;
+}
+
+void mmdbg_log( const string & line )
+{
+    if ( mmdbg_timing_enabled() ) {
+        cerr << line << endl;
+    }
+}
+}
 
 EventLoop::EventLoop()
     : signals_( { SIGCHLD, SIGCONT, SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1 } ),
@@ -102,7 +120,34 @@ int EventLoop::internal_loop( const std::function<int(void)> & wait_time_us )
                               [&] () { return handle_signal( signal_fd.read_signal() ); } );
 
     while ( true ) {
-        const auto poll_result = poller_.poll_us( wait_time_us() );
+        const int requested_timeout_us = wait_time_us();
+        const uint64_t poll_start_us = timestamp_us();
+        const auto poll_result = poller_.poll_us( requested_timeout_us );
+        const uint64_t poll_end_us = timestamp_us();
+
+        if ( mmdbg_timing_enabled() ) {
+            static uint64_t loop_idx = 0;
+            loop_idx++;
+            if ( requested_timeout_us == 0
+                 or poll_result.result == Poller::Result::Type::Timeout
+                 or ( loop_idx % 1024 == 0 ) ) {
+                string result_name = "Success";
+                if ( poll_result.result == Poller::Result::Type::Timeout ) {
+                    result_name = "Timeout";
+                } else if ( poll_result.result == Poller::Result::Type::Exit ) {
+                    result_name = "Exit";
+                }
+
+                mmdbg_log( "MMDBG component=EventLoop fn=internal_loop_poll"
+                           " loop_idx=" + to_string( loop_idx ) +
+                           " requested_timeout_us=" + to_string( requested_timeout_us ) +
+                           " poll_start_us=" + to_string( poll_start_us ) +
+                           " poll_end_us=" + to_string( poll_end_us ) +
+                           " actual_sleep_us=" + to_string( poll_end_us - poll_start_us ) +
+                           " result=" + result_name );
+            }
+        }
+
         if ( poll_result.result == Poller::Result::Type::Exit ) {
             return poll_result.exit_status;
         }

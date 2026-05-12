@@ -2,6 +2,8 @@
 
 #include <thread>
 #include <chrono>
+#include <cstdlib>
+#include <iostream>
 
 #include <sys/socket.h>
 #include <net/route.h>
@@ -20,6 +22,21 @@
 
 using namespace std;
 using namespace PollerShortNames;
+
+namespace {
+bool mmdbg_timing_enabled( void )
+{
+    static const bool enabled = getenv( "MAHIMAHI_MMDBG_TIMING" ) != nullptr;
+    return enabled;
+}
+
+void mmdbg_log( const string & line )
+{
+    if ( mmdbg_timing_enabled() ) {
+        cerr << line << endl;
+    }
+}
+}
 
 template <class FerryQueueType>
 PacketShell<FerryQueueType>::PacketShell( const std::string & device_prefix, char ** const user_environment, const bool passthrough_until_signal )
@@ -170,6 +187,9 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
                                               FileDescriptor & tun,
                                               FileDescriptor & sibling )
 {
+    uint64_t sibling_interest_false_to_true_count = 0;
+    bool sibling_was_interested = false;
+
     /* tun device gets datagram -> read it -> give to ferry */
     add_simple_input_handler( tun, 
                               [&] () {
@@ -184,10 +204,28 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
     /* ferry ready to write datagram -> send to sibling's tun device */
     add_action( Poller::Action( sibling, Direction::Out,
                                 [&] () {
+                                    const uint64_t start_us = timestamp_us();
                                     ferry_queue.write_packets( sibling );
+                                    if ( mmdbg_timing_enabled() ) {
+                                        const uint64_t end_us = timestamp_us();
+                                        mmdbg_log( "MMDBG component=Ferry fn=sibling_out_callback"
+                                                   " start_us=" + to_string( start_us ) +
+                                                   " dur_us=" + to_string( end_us - start_us ) );
+                                    }
                                     return ResultType::Continue;
                                 },
-                                [&] () { return (!passthrough_) and ferry_queue.pending_output(); } ) );
+                                [&] () {
+                                    const bool interested = (!passthrough_) and ferry_queue.pending_output();
+                                    if ( mmdbg_timing_enabled() and interested and !sibling_was_interested ) {
+                                        sibling_interest_false_to_true_count++;
+                                        mmdbg_log( "MMDBG component=Ferry fn=sibling_out_interest_transition"
+                                                   " transition=false_to_true"
+                                                   " idx=" + to_string( sibling_interest_false_to_true_count ) +
+                                                   " at_us=" + to_string( timestamp_us() ) );
+                                    }
+                                    sibling_was_interested = interested;
+                                    return interested;
+                                } ) );
 
     /* exit if finished */
     add_action( Poller::Action( sibling, Direction::Out,
@@ -196,7 +234,23 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
                                 },
                                 [&] () { return ferry_queue.finished(); } ) );
 
-    return internal_loop( [&] () { return ferry_queue.wait_time(); } );
+    return internal_loop( [&] () {
+            const uint64_t start_us = timestamp_us();
+            const int wait_us = ferry_queue.wait_time();
+            if ( mmdbg_timing_enabled() ) {
+                const uint64_t end_us = timestamp_us();
+                static uint64_t timeout_call_idx = 0;
+                timeout_call_idx++;
+                if ( wait_us == 0 or ( timeout_call_idx % 1024 == 0 ) ) {
+                    mmdbg_log( "MMDBG component=Ferry fn=timeout_lambda"
+                               " call_idx=" + to_string( timeout_call_idx ) +
+                               " start_us=" + to_string( start_us ) +
+                               " dur_us=" + to_string( end_us - start_us ) +
+                               " ret_wait_us=" + to_string( wait_us ) );
+                }
+            }
+            return wait_us;
+        } );
 }
 
 struct TemporaryEnvironment
