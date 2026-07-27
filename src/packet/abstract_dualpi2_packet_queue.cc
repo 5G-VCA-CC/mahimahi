@@ -1,7 +1,8 @@
+#include <cassert>
 #include <chrono>
 
 #include "abstract_dualpi2_packet_queue.hh"
-#include "dropping_packet_queue.hh"
+#include "ezio.hh"
 #include "timestamp.hh"
 
 #include <netinet/ip.h>
@@ -10,6 +11,44 @@
 #include <cstddef>
 
 using namespace std;
+
+/* Extract the value string for a whole-token key (name=...), or empty if absent. */
+static string get_arg_value( const string & args, const string & name )
+{
+    size_t offset = 0;
+    while ( offset < args.size() ) {
+        while ( offset < args.size()
+                && ( args[ offset ] == ' '
+                     || args[ offset ] == '\t'
+                     || args[ offset ] == ',' ) ) {
+            offset++;
+        }
+        if ( offset >= args.size() ) {
+            break;
+        }
+
+        const bool name_matches =
+            args.compare( offset, name.size(), name ) == 0
+            && offset + name.size() < args.size()
+            && args[ offset + name.size() ] == '=';
+
+        if ( name_matches ) {
+            offset += name.size() + 1; /* skip "name=" */
+            const size_t end = args.find_first_of( ", \t", offset );
+            return args.substr( offset,
+                                ( end == string::npos ? args.size() : end ) - offset );
+        }
+
+        /* Advance to the next comma-separated argument. */
+        const size_t next = args.find( ',', offset );
+        if ( next == string::npos ) {
+            break;
+        }
+        offset = next + 1;
+    }
+
+    return "";
+}
 
 void AbstractDualPI2PacketQueue::enqueue( QueuedPacket && p )
 {
@@ -88,9 +127,27 @@ uint64_t AbstractDualPI2PacketQueue::qdelay_in_ns ( uint64_t ref )
 
 // Utilities
 
+bool has_arg( const string & args, const string & name )
+{
+    return not get_arg_value( args, name ).empty();
+}
+
 unsigned int get_arg( const string & args, const string & name )
 {
-    return DroppingPacketQueue::get_arg( args, name );
+    const string val = get_arg_value( args, name );
+    if ( val.empty() ) {
+        return 0; /* default when not provided */
+    }
+    return myatoi( val );
+}
+
+double get_arg_double( const string & args, const string & name )
+{
+    const string val = get_arg_value( args, name );
+    if ( val.empty() ) {
+        return 0; /* default when not provided */
+    }
+    return myatof( val );
 }
 
 void print_ipv4_header( QueuedPacket & p ) 

@@ -41,8 +41,10 @@ public:
 };
 
 
-// Utilities
+// Utilities for DualPI2 queue-args parsing (NAME=VALUE[, NAME2=VALUE2, ...])
+bool has_arg( const std::string & args, const std::string & name );
 unsigned int get_arg( const std::string & args, const std::string & name );
+double get_arg_double( const std::string & args, const std::string & name );
 void print_ipv4_header( QueuedPacket & p ); 
 unsigned short calculate_ip_checksum(unsigned short *addr, unsigned int count); 
 

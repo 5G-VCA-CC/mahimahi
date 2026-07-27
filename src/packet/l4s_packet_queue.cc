@@ -3,8 +3,6 @@
 #include "l4s_packet_queue.hh"
 #include "timestamp.hh"
 
-#include <iostream>
-
 using namespace std;
 
 L4SPacketQueue::L4SPacketQueue( const string & args )
@@ -12,17 +10,16 @@ L4SPacketQueue::L4SPacketQueue( const string & args )
     min_delay_thresh_ms_ ( get_arg( args, "l4s_min_threshold" ) ),
     min_qlen_pkt_ ( get_arg( args, "l4s_min_len" ) )
 {   
+    /* l4s_min_threshold=0 (or omitted) selects the step marking function. */
     if ( min_delay_thresh_ms_ == 0 ) {
-        // Use the step function (as opposed to ramp)
         step_ = true;
     }
     else step_ = false;
 
-    if ( max_delay_thresh_ms_ == 0 )
+    if ( not has_arg( args, "l4s_max_threshold" ) )
         max_delay_thresh_ms_ = 1; // ms
 
-      std::cout << "max_delay_thresh_ms_ " << std::to_string(max_delay_thresh_ms_) << std::endl;  
-    if ( min_qlen_pkt_ == 0 )
+    if ( not has_arg( args, "l4s_min_len" ) )
         min_qlen_pkt_ = 1;
 }
 

@@ -20,8 +20,8 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     scheduler_type_ ( static_cast<SchedulerType> (get_arg( args, "sched" ))),
     target_ms_ ( get_arg( args, "target" ) ),
     max_rtt_ms_ ( get_arg( args, "max_rtt" ) ),
-    alpha_ ( get_arg( args, "alpha" ) ),
-    beta_ ( get_arg( args, "beta" ) ),
+    alpha_ ( get_arg_double( args, "alpha" ) ),
+    beta_ ( get_arg_double( args, "beta" ) ),
     t_update_ms_ ( get_arg( args, "tupdate" ) ),
     overload_drop_pkts_ ( 0 ),
     overflow_drop_pkts_ ( 0 ),
@@ -34,31 +34,32 @@ DualQCoupledAQM::DualQCoupledAQM( const string & args )
     k_ ( 2 ),
     l4s_drop_on_overload_ ( true )
 {
-    if ( packet_limit_ == 0 and byte_limit_ == 0 ) {
+    /* Queue limit: prefer packets when provided; otherwise bytes; else defaults. */
+    if ( not has_arg( args, "packets" ) and not has_arg( args, "bytes" ) ) {
         packet_limit_ = 10000; /* default value from Linux code. Represents 125 ms at 1 Gbps */
         byte_limit_ = packet_limit_ * MTU;
     }
-    else if (packet_limit_ != 0) {
+    else if ( has_arg( args, "packets" ) ) {
         // Prioritize packet_limit_ over byte_limit_
         byte_limit_ = packet_limit_ * MTU;
-
     }
-    else if (byte_limit_ != 0) {
+    else {
         packet_limit_ = byte_limit_ / MTU;
     }
 
     max_prob = 1.0;
 
-    if ( target_ms_ == 0 ) target_ms_ = 15; 
-    if ( max_rtt_ms_ == 0 ) max_rtt_ms_ = 100;
-    if ( t_update_ms_ == 0 ) t_update_ms_ = 16; // RFC 9332: Tupdate = min(target, RTT_max/3)
+    /* Apply defaults only when the corresponding arg was omitted. */
+    if ( not has_arg( args, "target" ) ) target_ms_ = 15;
+    if ( not has_arg( args, "max_rtt" ) ) max_rtt_ms_ = 100;
+    if ( not has_arg( args, "tupdate" ) ) t_update_ms_ = 16; // RFC 9332: Tupdate = min(target, RTT_max/3)
 
     /* From RFC 9332:
         13:   alpha = 0.1 * Tupdate / RTT_max^2      % PI integral gain in Hz
         14:   beta = 0.3 / RTT_max                   % PI proportional gain in Hz */
 
-    if ( alpha_ == 0 ) alpha_ = 0.16;
-    if ( beta_ == 0 ) beta_ = 3.2;
+    if ( not has_arg( args, "alpha" ) ) alpha_ = 0.16;
+    if ( not has_arg( args, "beta" ) ) beta_ = 3.2;
     
 
     if (scheduler_type_ == SchedulerType::WRR) {
