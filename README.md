@@ -1,14 +1,10 @@
 # Mahimahi DualPI2
 
----
-
 The original Mahimahi README follows below.
 
 Mahimahi is a set of lightweight network emulation tools for recording and replaying traffic under controlled link conditions (delay, loss, and rate). For an overview of the standard tools (`mm-delay`, `mm-link`, `mm-loss`, record/replay shells, and more), see the official documentation at [http://mahimahi.mit.edu/](http://mahimahi.mit.edu/).
 
 ## Using the DualPI2 module
-
----
 
 To use the DualPI2 AQM, set it as the uplink and/or downlink queue type in `mm-link` via `--uplink-queue` and/or `--downlink-queue`, and pass DualPI2 parameters with `--uplink-queue-args` and/or `--downlink-queue-args`:
 
@@ -53,8 +49,6 @@ Arguments are a comma-separated list of `NAME=VALUE` pairs. All of the following
 
 ## Nesting `mm-delay`
 
----
-
 Mahimahi shells compose by nesting. To add a fixed one-way delay around a DualPI2 link:
 
 ```bash
@@ -82,8 +76,6 @@ This script finds the `mm-link` router namespace that bridges the delay and link
 
 ## Nesting `mm-loss`
 
----
-
 You can also nest `mm-loss` (typically between `mm-delay` and `mm-link`) to add stochastic packet loss:
 
 ```bash
@@ -108,6 +100,26 @@ With three nested shells (`mm-delay` → `mm-loss` → `mm-link`), use the three
 ```
 
 This configures both the first-level and second-level Mahimahi router namespaces so packets are correctly forwarded across the delay, loss, and link layers.
+
+## Cite us
+
+Nawel Alioua, Linghe Zhang, Aneesh Garg, Francis Y. Yan, and Elizabeth Belding.2026. A DualPI2 Module for Mahimahi: Behavioral Characterization and Cross-Platform Analysis. (2026). arXiv: 2603.04381 [cs.NI].
+
+Bibtex:
+
+```bibtex
+@misc{dualpi2-mahimahi,
+      title={A DualPI2 Module for Mahimahi: Behavioral Characterization and Cross-Platform Analysis}, 
+      author={Nawel Alioua and Linghe Zhang and Aneesh Garg and Francis Y. Yan and Elizabeth Belding},
+      year={2026},
+      eprint={2603.04381},
+      archivePrefix={arXiv},
+      primaryClass={cs.NI},
+      url={https://arxi```v.org/abs/2603.04381}, 
+}
+```
+
+Paper: [https://arxiv.org/abs/2603.04381](https://arxiv.org/abs/2603.04381)
 
 ---
 
