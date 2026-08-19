@@ -103,23 +103,32 @@ This configures both the first-level and second-level Mahimahi router namespaces
 
 ## Cite us
 
-Nawel Alioua, Linghe Zhang, Aneesh Garg, Francis Y. Yan, and Elizabeth Belding.2026. A DualPI2 Module for Mahimahi: Behavioral Characterization and Cross-Platform Analysis. (2026). arXiv: 2603.04381 [cs.NI].
+Nawel Alioua, Linghe Zhang, Aneesh Garg, Francis Y. Yan, and Elizabeth Belding. 2026. A DualPI2 Module for Mahimahi: Behavioral Characterization and Cross-Platform Analysis. SIGCOMM Comput. Commun. Rev. 56, 2 (July 2026), 10–28.
 
 Bibtex:
 
 ```bibtex
-@misc{dualpi2-mahimahi,
-      title={A DualPI2 Module for Mahimahi: Behavioral Characterization and Cross-Platform Analysis}, 
-      author={Nawel Alioua and Linghe Zhang and Aneesh Garg and Francis Y. Yan and Elizabeth Belding},
-      year={2026},
-      eprint={2603.04381},
-      archivePrefix={arXiv},
-      primaryClass={cs.NI},
-      url={https://arxi```v.org/abs/2603.04381}, 
+@article{mahimahi-dualpi2-2026,
+author = {Alioua, Nawel and Zhang, Linghe and Garg, Aneesh and Yan, Francis Y. and Belding, Elizabeth},
+title = {A DualPI2 Module for Mahimahi: Behavioral Characterization and Cross-Platform Analysis},
+year = {2026},
+issue_date = {July 2026},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {56},
+number = {2},
+issn = {0146-4833},
+url = {https://doi.org/10.1145/3831956.3831959},
+doi = {10.1145/3831956.3831959},
+journal = {SIGCOMM Comput. Commun. Rev.},
+month = aug,
+pages = {10–28},
+numpages = {19},
+keywords = {L4S, DualPI2, low-latency, network emulation, active queue management, ECN, statistical analysis}
 }
 ```
 
-Paper: [https://arxiv.org/abs/2603.04381](https://arxiv.org/abs/2603.04381)
+Paper: [https://arxiv.org/abs/2603.04381](https://dl.acm.org/doi/10.1145/3831956.3831959)
 
 ---
 
