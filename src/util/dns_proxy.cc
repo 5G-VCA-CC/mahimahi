@@ -6,6 +6,7 @@
 #include "poller.hh"
 #include "bytestream_queue.hh"
 #include "event_loop.hh"
+#include "timestamp.hh"
 #include "exception.hh"
 
 using namespace std;
@@ -63,7 +64,7 @@ void DNSProxy::handle_udp( void )
                                                                              dns_server.read() );
                                                        return ResultType::Continue;
                                                    } ) );
-                poller.poll( 60000 );
+                poller.poll( 60 * NS_PER_SECOND );
             } catch ( const exception & e ) {
                 print_exception( e );
                 return;
@@ -109,7 +110,7 @@ void DNSProxy::handle_tcp( void )
                                                    from_server.non_empty ) );
 
                 while( true ) {
-                    if ( poller.poll( 60000 ).result == Poller::Result::Type::Exit ) {
+                    if ( poller.poll( 60 * NS_PER_SECOND ).result == Poller::Result::Type::Exit ) {
                         return;
                     }
                 }

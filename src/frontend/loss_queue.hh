@@ -28,7 +28,7 @@ public:
 
     void write_packets( FileDescriptor & fd );
 
-    unsigned int wait_time( void );
+    uint64_t next_event_time_ns( void );
 
     bool pending_output( void ) const { return not packet_queue_.empty(); }
 
@@ -55,12 +55,13 @@ private:
 
     uint64_t next_switch_time_;
 
+    /* advance the on/off process up to the given time */
+    void update_link_state( const uint64_t now );
+
     bool drop_packet( const std::string & packet ) override;
 
 public:
     StochasticSwitchingLink( const double mean_on_time_, const double mean_off_time );
-
-    unsigned int wait_time( void );
 };
 
 class PeriodicSwitchingLink : public LossQueue
@@ -69,12 +70,13 @@ private:
     bool link_is_on_;
     uint64_t on_time_, off_time_, next_switch_time_;
 
+    /* advance the on/off schedule up to the given time */
+    void update_link_state( const uint64_t now );
+
     bool drop_packet( const std::string & packet ) override;
 
 public:
     PeriodicSwitchingLink( const double on_time, const double off_time );
-
-    unsigned int wait_time( void );
 };
 
 #endif /* LOSS_QUEUE_HH */

@@ -30,7 +30,7 @@ void usage_error( const string & program_name )
     cerr << "              (with NAME = bytes | packets | target | interval | qdelay_ref | max_burst)" << endl;
     // TODO: DualPI2 - add the required params
 
-    cerr << "                  target, interval, qdelay_ref, max_burst are in milli-second" << endl << endl;
+    cerr << "                  target, interval, qdelay_ref, max_burst are in milli-second (fractional allowed)" << endl << endl;
 
     throw runtime_error( "invalid arguments" );
 }

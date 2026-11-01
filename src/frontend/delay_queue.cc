@@ -9,29 +9,29 @@ using namespace std;
 
 void DelayQueue::read_packet( const string & contents )
 {
-    packet_queue_.emplace( timestamp() + delay_ms_, contents );
+    packet_queue_.emplace( timestamp_ns() + delay_ns_, contents );
 }
 
 void DelayQueue::write_packets( FileDescriptor & fd )
 {
     while ( (!packet_queue_.empty())
-            && (packet_queue_.front().first <= timestamp()) ) {
+            && (packet_queue_.front().first <= timestamp_ns()) ) {
         fd.write( packet_queue_.front().second );
         packet_queue_.pop();
     }
 }
 
-unsigned int DelayQueue::wait_time( void ) const
+uint64_t DelayQueue::next_event_time_ns( void ) const
 {
     if ( packet_queue_.empty() ) {
-        return numeric_limits<uint16_t>::max();
+        return numeric_limits<uint64_t>::max();
     }
 
-    const auto now = timestamp();
+    return packet_queue_.front().first;
+}
 
-    if ( packet_queue_.front().first <= now ) {
-        return 0;
-    } else {
-        return packet_queue_.front().first - now;
-    }
+bool DelayQueue::pending_output( void ) const
+{
+    return (!packet_queue_.empty())
+        && (packet_queue_.front().first <= timestamp_ns());
 }

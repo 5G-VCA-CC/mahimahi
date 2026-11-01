@@ -21,18 +21,20 @@ private:
     //It maybe better to get this in a more reliable way in the future.
     const static unsigned int PACKET_SIZE = 1504; /* default max TUN payload size */
 
-    //Configurable parameters
-    uint32_t qdelay_ref_, max_burst_;
+    //Configurable parameters (ns)
+    uint64_t qdelay_ref_, max_burst_;
 
     //Internal parameters
-    double alpha_, beta_;
-    uint32_t t_update_;     // ms
+    double alpha_, beta_;   // applied to delays in ms
+    uint64_t t_update_;     // ns
     uint32_t dq_threshold_; // bytes
 
     //Status variables
     double drop_prob_;
-    uint32_t burst_allowance_, qdelay_old_, current_qdelay_;
-    uint32_t dq_count_, dq_tstamp_, avg_dq_rate_;
+    uint64_t burst_allowance_, qdelay_old_, current_qdelay_; // ns
+    uint32_t dq_count_;
+    uint64_t dq_tstamp_;    // ns
+    double avg_dq_rate_;    // bytes per ns
 
     //Implementation specific
     std::uniform_real_distribution<double> uniform_generator_;

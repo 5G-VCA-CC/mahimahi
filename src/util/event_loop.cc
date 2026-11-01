@@ -3,6 +3,8 @@
 #include <algorithm>
 
 #include "event_loop.hh"
+#include "timerfd.hh"
+#include "timestamp.hh"
 #include "exception.hh"
 
 using namespace std;
@@ -84,7 +86,7 @@ Result EventLoop::handle_signal( const signalfd_siginfo & sig )
     return ResultType::Continue;
 }
 
-int EventLoop::internal_loop( const std::function<int(void)> & wait_time )
+int EventLoop::internal_loop( const std::function<uint64_t(void)> & next_deadline_ns )
 {
     TemporarilyUnprivileged tu;
 
@@ -101,8 +103,29 @@ int EventLoop::internal_loop( const std::function<int(void)> & wait_time )
     add_simple_input_handler( signal_fd.fd(),
                               [&] () { return handle_signal( signal_fd.read_signal() ); } );
 
+    /* deadline reached -> wake up (an absolute timerfd deadline is not subject to timer slack) */
+    Timerfd deadline_timer;
+    uint64_t armed_deadline_ns = NO_DEADLINE;
+    add_simple_input_handler( deadline_timer,
+                              [&] () {
+                                  deadline_timer.read_expirations();
+                                  armed_deadline_ns = NO_DEADLINE;
+                                  return ResultType::Continue;
+                              } );
+
     while ( true ) {
-        const auto poll_result = poller_.poll( wait_time() );
+        const uint64_t deadline_ns = next_deadline_ns();
+
+        if ( deadline_ns != armed_deadline_ns ) {
+            if ( deadline_ns == NO_DEADLINE ) {
+                deadline_timer.disarm();
+            } else {
+                deadline_timer.set_deadline_ns( initial_timestamp_ns() + deadline_ns );
+            }
+            armed_deadline_ns = deadline_ns;
+        }
+
+        const auto poll_result = poller_.poll( -1 );
         if ( poll_result.result == Poller::Result::Type::Exit ) {
             return poll_result.exit_status;
         }

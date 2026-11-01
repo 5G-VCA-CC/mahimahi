@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <numeric>
 #include "poller.hh"
+#include "timestamp.hh"
 #include "exception.hh"
 
 using namespace std;
@@ -19,7 +20,7 @@ unsigned int Poller::Action::service_count( void ) const
     return direction == Direction::In ? fd.read_count() : fd.write_count();
 }
 
-Poller::Result Poller::poll( const int & timeout_ms )
+Poller::Result Poller::poll( const int64_t timeout_ns )
 {
     assert( pollfds_.size() == actions_.size() );
 
@@ -42,7 +43,16 @@ Poller::Result Poller::poll( const int & timeout_ms )
         return Result::Type::Exit;
     }
 
-    if ( 0 == SystemCall( "poll", ::poll( &pollfds_[ 0 ], pollfds_.size(), timeout_ms ) ) ) {
+    timespec timeout {};
+    timespec * timeout_ptr = nullptr; /* negative timeout_ns: wait indefinitely */
+
+    if ( timeout_ns >= 0 ) {
+        timeout.tv_sec = timeout_ns / NS_PER_SECOND;
+        timeout.tv_nsec = timeout_ns % NS_PER_SECOND;
+        timeout_ptr = &timeout;
+    }
+
+    if ( 0 == SystemCall( "ppoll", ::ppoll( &pollfds_[ 0 ], pollfds_.size(), timeout_ptr, nullptr ) ) ) {
         return Result::Type::Timeout;
     }
 

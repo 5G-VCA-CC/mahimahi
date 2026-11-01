@@ -23,7 +23,7 @@ public:
 
     void write_packets( FileDescriptor & fd );
 
-    unsigned int wait_time( void ) const;
+    uint64_t next_event_time_ns( void ) const;
 
     bool pending_output( void ) const { return not packet_queue_.empty(); }
 

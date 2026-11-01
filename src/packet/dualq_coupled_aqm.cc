@@ -259,7 +259,7 @@ bool DualQCoupledAQM::roll( double prob ) {
 
 void DualQCoupledAQM::set_periodic_update( void ) 
 {
-    const timespec interval { 0, t_update_ms_ * NS_PER_MS };
+    const timespec interval { 0, long( t_update_ms_ * NS_PER_MS ) };
     timer_.set_time( interval, interval );
    
     poller_.add_action( Poller::Action( timer_, Direction::In, 
@@ -294,7 +294,7 @@ double DualQCoupledAQM::calculate_base_aqm_prob( uint64_t ref )
 
     uint64_t qdelay = max( l4s_qdelay_ns_, classic_qdelay_ns_ ) ;
 
-    double delta = ((int64_t)qdelay - (int64_t)target_ms_ * NS_PER_MS) * alpha_ +
+    double delta = ((int64_t)qdelay - (int64_t)target_ms_ * (int64_t)NS_PER_MS) * alpha_ +
                     ((int64_t)qdelay - (int64_t)qdelay_old) * beta_;
 
     double new_pp;

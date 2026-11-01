@@ -6,6 +6,7 @@
 #include <functional>
 #include <vector>
 #include <cassert>
+#include <cstdint>
 
 #include <poll.h>
 
@@ -57,7 +58,7 @@ public:
 
     Poller() : actions_(), pollfds_() {}
     void add_action( Action action );
-    Result poll( const int & timeout_ms );
+    Result poll( const int64_t timeout_ns );
 };
 
 namespace PollerShortNames {

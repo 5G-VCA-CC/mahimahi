@@ -6,7 +6,7 @@ use POSIX;
 
 sub usage
 {
-  die qq{Usage: $0 MS_PER_BIN [filename]\n};
+  die qq{Usage: $0 MS_PER_BIN [filename]\n  (MS_PER_BIN may be fractional, e.g. 0.5)\n};
 }
 
 if ( scalar @ARGV < 1 or scalar @ARGV > 2 ) {
@@ -15,16 +15,16 @@ if ( scalar @ARGV < 1 or scalar @ARGV > 2 ) {
 
 my $MS_PER_BIN = shift;
 
-if ( $MS_PER_BIN !~ m{^\d+$} ) {
+if ( $MS_PER_BIN !~ m{^\d+(\.\d+)?$} or $MS_PER_BIN <= 0 ) {
   usage;
 }
 
 sub ms_to_bin {
-  return int( $_[0] / $MS_PER_BIN );
+  return POSIX::floor( $_[0] / $MS_PER_BIN );
 }
 
 sub bin_to_seconds {
-  return sprintf q{%.3f}, $_[0] * $MS_PER_BIN / 1000.0;
+  return sprintf q{%.6f}, $_[0] * $MS_PER_BIN / 1000.0;
 }
 
 my ( %capacity, %arrivals, %departures );
@@ -41,7 +41,7 @@ my %signal_delay;
 LINE: while ( <> ) {
   chomp;
 
-  if ( m{^# base timestamp: (\d+)} ) {
+  if ( m{^# base timestamp: (\d+(?:\.\d+)?)} ) {
     if ( defined $base_timestamp ) {
       die "base timestamp multiply defined";
     } else {
@@ -59,7 +59,7 @@ LINE: while ( <> ) {
     die q{Format: timestamp event_type num_bytes [delay]};
   }
 
-  if ( $timestamp !~ m{^\d+$} ) {
+  if ( $timestamp !~ m{^\d+(\.\d+)?$} ) {
     die qq{Invalid timestamp: $timestamp};
   }
 
@@ -106,10 +106,13 @@ LINE: while ( <> ) {
     push @delays, $delay;
     $departure_sum += $num_bits;
 
-    $signal_delay{ $timestamp - $delay } = min( $delay,
-						(defined $signal_delay{ $timestamp - $delay })
-						? $signal_delay{ $timestamp - $delay }
-						: POSIX::DBL_MAX );
+    # signal delay is sampled on whole milliseconds: a message created at
+    # millisecond $sent_ms can ride in this packet and arrives at $timestamp
+    my $sent_ms = POSIX::floor( $timestamp - $delay );
+    $signal_delay{ $sent_ms } = min( $timestamp - $sent_ms,
+				     (defined $signal_delay{ $sent_ms })
+				     ? $signal_delay{ $sent_ms }
+				     : POSIX::DBL_MAX );
   } else {
     die qq{Unknown event type: $event_type};
   }
@@ -172,8 +175,8 @@ my $pp95s = $signal_delays[ 0.95 * scalar @signal_delays ];
 
 printf STDERR qq{Average capacity: %.2f Mbits/s\n}, $average_capacity;
 printf STDERR qq{Average throughput: %.2f Mbits/s (%.1f%% utilization)\n}, $average_throughput, 100.0 * $average_throughput / $average_capacity;
-printf STDERR qq{95th percentile per-packet queueing delay: %.0f ms\n}, $pp95;
-printf STDERR qq{95th percentile signal delay: %.0f ms\n}, $pp95s;
+printf STDERR qq{95th percentile per-packet queueing delay: %.3f ms\n}, $pp95;
+printf STDERR qq{95th percentile signal delay: %.3f ms\n}, $pp95s;
 
 # make graph
 my $earliest_bin = min( keys %arrivals, keys %capacity, keys %departures );

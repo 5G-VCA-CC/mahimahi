@@ -26,8 +26,8 @@ class CODELPacketQueue : public DroppingPacketQueue
 {
 private:
     const static unsigned int PACKET_SIZE = 1504;
-    //Configuration parameters
-    uint32_t target_, interval_;
+    //Configuration parameters (ns)
+    uint64_t target_, interval_;
 
     //State variables
     uint64_t first_above_time_, drop_next_;

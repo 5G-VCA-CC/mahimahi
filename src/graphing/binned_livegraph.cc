@@ -14,12 +14,12 @@ BinnedLiveGraph::BinnedLiveGraph( const string & name,
                                   const string & y_label,
                                   const double multiplier,
                                   const bool rate_quantity,
-                                  const unsigned int bin_width_ms,
-                                  const function<void(int,int&)> initialize_new_bin )
+                                  const uint64_t bin_width_ns,
+                                  const function<void(int&)> initialize_new_bin )
     : graph_( 640, 480, name, 0, 1, styles, "time (s)", y_label ),
-      bin_width_ms_( bin_width_ms ),
+      bin_width_ns_( bin_width_ns ),
       value_this_bin_( styles.size() ),
-      current_bin_( timestamp() / bin_width_ms_ ),
+      current_bin_( timestamp_ns() / bin_width_ns_ ),
       multiplier_( multiplier ),
       rate_quantity_( rate_quantity ),
       mutex_(),
@@ -49,21 +49,21 @@ void BinnedLiveGraph::animation_loop( void )
         const uint64_t ts = advance();
 
         /* calculate "current" estimate based on partial bin */
-        const double bin_width_so_far = ts % bin_width_ms_;
+        const double bin_width_so_far = ts % bin_width_ns_;
         vector<float> current_estimates;
         current_estimates.reserve( value_this_bin_.size() );
         for ( const auto & x : value_this_bin_ ) {
             double current_estimate = x * multiplier_;
             if ( rate_quantity_ ) {
-                current_estimate /= (bin_width_so_far / 1000.0);
+                current_estimate /= (bin_width_so_far / NS_PER_SECOND);
             }
             current_estimates.emplace_back( current_estimate );
         }
 
-        const double bin_fraction = bin_width_so_far / double( bin_width_ms_ );
+        const double bin_fraction = bin_width_so_far / double( bin_width_ns_ );
         const double confidence = pow( 1 - cos( bin_fraction * 3.14159 / 2.0 ), 2 );
 
-        graph_.blocking_draw( ts / 1000.0, logical_width(),
+        graph_.blocking_draw( ts / double( NS_PER_SECOND ), logical_width(),
                               current_estimates,
                               confidence );
     }
@@ -73,20 +73,20 @@ uint64_t BinnedLiveGraph::advance( void )
 {
     unique_lock<mutex> ul { mutex_ };
 
-    const uint64_t now = timestamp();
+    const uint64_t now = timestamp_ns();
 
-    const uint64_t now_bin = now / bin_width_ms_;
+    const uint64_t now_bin = now / bin_width_ns_;
 
     while ( current_bin_ < now_bin ) {
         for ( unsigned int i = 0; i < value_this_bin_.size(); i++ ) {
             double value = value_this_bin_[ i ] * multiplier_;
             if ( rate_quantity_ ) {
-                value /= (bin_width_ms_ / 1000.0);
+                value /= (bin_width_ns_ / double( NS_PER_SECOND ));
             }
             graph_.add_data_point( i,
-                                   (current_bin_ + 1) * bin_width_ms_ / 1000.0,
+                                   (current_bin_ + 1) * bin_width_ns_ / double( NS_PER_SECOND ),
                                    value );
-            initialize_new_bin_( bin_width_ms_, value_this_bin_[ i ] );
+            initialize_new_bin_( value_this_bin_[ i ] );
         }
         current_bin_++;
     }
