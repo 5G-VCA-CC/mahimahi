@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include <sys/socket.h>
+#include <sys/prctl.h>
 #include <net/route.h>
 
 #include "packetshell.hh"
@@ -39,7 +40,7 @@ PacketShell<FerryQueueType>::PacketShell( const std::string & device_prefix, cha
     }
 
     /* initialize base timestamp value before any forking */
-    initial_timestamp();
+    initial_timestamp_ns();
 }
 
 template <class FerryQueueType>
@@ -196,7 +197,12 @@ int PacketShell<FerryQueueType>::Ferry::loop( FerryQueueType & ferry_queue,
                                 },
                                 [&] () { return ferry_queue.finished(); } ) );
 
-    return internal_loop( [&] () { return ferry_queue.wait_time(); } );
+    /* Safety net only: the ferry wakes up on EventLoop's absolute timerfd deadline,
+       which has no timer slack, and polls without a timeout. Minimal slack matters
+       only if a finite poll timeout is ever introduced here. */
+    SystemCall( "prctl PR_SET_TIMERSLACK", prctl( PR_SET_TIMERSLACK, 1 ) );
+
+    return internal_loop( [&] () { return ferry_queue.next_event_time_ns(); } );
 }
 
 struct TemporaryEnvironment

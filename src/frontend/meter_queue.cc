@@ -1,5 +1,7 @@
 /* -*-mode:c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
+#include <limits>
+
 #include "meter_queue.hh"
 #include "util.hh"
 #include "timestamp.hh"
@@ -35,7 +37,8 @@ void MeterQueue::write_packets( FileDescriptor & fd )
     }
 }
 
-unsigned int MeterQueue::wait_time( void ) const
+uint64_t MeterQueue::next_event_time_ns( void ) const
 {
-    return packet_queue_.empty() ? numeric_limits<uint16_t>::max() : 0;
+    /* packets leave as soon as the sibling is writable; nothing is timed */
+    return numeric_limits<uint64_t>::max();
 }

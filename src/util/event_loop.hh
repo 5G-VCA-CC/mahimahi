@@ -5,6 +5,8 @@
 
 #include <vector>
 #include <functional>
+#include <cstdint>
+#include <limits>
 
 #include "poller.hh"
 #include "file_descriptor.hh"
@@ -23,11 +25,15 @@ private:
 protected:
     void add_action( Poller::Action action ) { poller_.add_action( action ); }
 
-    int internal_loop( const std::function<int(void)> & wait_time );
+    /* next_deadline_ns returns when the loop should next wake up, in timestamp_ns() time,
+       or NO_DEADLINE to wait only for file descriptor events */
+    int internal_loop( const std::function<uint64_t(void)> & next_deadline_ns );
 
     virtual void handle_sigusr1() {}
 
 public:
+    static constexpr uint64_t NO_DEADLINE = std::numeric_limits<uint64_t>::max();
+
     EventLoop();
 
     void add_simple_input_handler( FileDescriptor & fd, const Poller::Action::CallbackType & callback );
@@ -47,7 +53,7 @@ public:
         child_processes_.emplace_back( continue_status, ChildProcess( std::forward<Targs>( Fargs )... ) );
     }
 
-    int loop( void ) { return internal_loop( [] () { return -1; } ); } /* no timeout */
+    int loop( void ) { return internal_loop( [] () { return NO_DEADLINE; } ); } /* no timeout */
 
     virtual ~EventLoop() {}
 };

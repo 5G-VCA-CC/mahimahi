@@ -5,7 +5,7 @@
 
 #include "delay_queue.hh"
 #include "util.hh"
-#include "ezio.hh"
+#include "timestamp.hh"
 #include "packetshell.cc"
 
 using namespace std;
@@ -25,7 +25,8 @@ int main( int argc, char *argv[] )
             throw runtime_error( "Usage: " + string( argv[ 0 ] ) + " delay-milliseconds [command...]" );
         }
 
-        const uint64_t delay_ms = myatoi( argv[ 1 ] );
+        /* milliseconds, possibly fractional (e.g. 0.25) */
+        const uint64_t delay_ns = ms_string_to_ns( argv[ 1 ] );
 
         vector< string > command;
 
@@ -39,10 +40,10 @@ int main( int argc, char *argv[] )
 
         PacketShell<DelayQueue> delay_shell_app( "delay", user_environment, passthrough_until_signal );
 
-        delay_shell_app.start_uplink( "[delay " + to_string( delay_ms ) + " ms] ",
+        delay_shell_app.start_uplink( "[delay " + string( argv[ 1 ] ) + " ms] ",
                                       command,
-                                      delay_ms );
-        delay_shell_app.start_downlink( delay_ms );
+                                      delay_ns );
+        delay_shell_app.start_downlink( delay_ns );
         return delay_shell_app.wait_for_exit();
     } catch ( const exception & e ) {
         print_exception( e );

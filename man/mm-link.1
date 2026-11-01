@@ -37,8 +37,10 @@ queues depending on its intended direction: the uplink queue or the downlink
 queue.  mm-link releases packets from each queue based on the corresponding
 input packet-delivery trace. 
 
-Each line in the trace  represents a packet delivery opportunity: the time at
-which an MTU-sized packet can be delivered in the emulation. Accounting is done
+Each line in the trace  represents a packet delivery opportunity: the time, in
+milliseconds, at which an MTU-sized packet can be delivered in the emulation.
+Times may be fractional, with up to nanosecond resolution (e.g. 0.24 or
+12.000250); integer traces work unchanged. Accounting is done
 at the byte-level, and each delivery opportunity represents the ability to
 deliver 1500 bytes. Thus, a single line in the trace file can delivery several
 smaller packets whose sizes sum to 1500 bytes. Delivery opportunities are
@@ -57,11 +59,14 @@ mm-link can optionally log detailed performance information for both the uplink 
 # mahimahi mm-link (name of link) [/path/to/trace] > /path/to/log
 # command line: [command used to run mm-link]
 # queue: [queue information]
-# init timestamp: [start time of mm-link]
+# init timestamp: [start time of mm-link (wall clock, ms since the epoch)]
 # base timestamp: [starting log timestamp]
 [# mahimahi config: [mahimahi shell prefix]]
 [log lines]
 .EE
+
+All timestamps and delays in the log are in milliseconds, with six decimal
+places (nanosecond resolution).
 
 Each log line is one of the following:
 
@@ -79,7 +84,7 @@ An unused delivery opportunity.
 A packet arrival to the link, it may be dropped later
 .RE
 
-[timestamp] - packet_size
+[timestamp] - packet_size queueing_delay
 .
 .IP ""
 .RS

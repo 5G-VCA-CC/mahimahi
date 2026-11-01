@@ -16,8 +16,8 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
                       unique_ptr<AbstractPacketQueue> && packet_queue,
                       const string & command_line )
     : next_delivery_( 0 ),
-      schedule_(),
-      base_timestamp_( timestamp() ),
+      schedule_ns_(),
+      base_timestamp_ns_( timestamp_ns() ),
       packet_queue_( move( packet_queue ) ),
       packet_in_transit_( "", 0 ),
       packet_in_transit_bytes_left_( 0 ),
@@ -44,22 +44,28 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
             throw runtime_error( filename + ": invalid empty line" );
         }
 
-        const uint64_t ms = myatoi( line );
+        /* each line is a delivery opportunity in (possibly fractional) milliseconds */
+        uint64_t ns;
+        try {
+            ns = ms_string_to_ns( line );
+        } catch ( const exception & e ) {
+            throw runtime_error( filename + ": " + e.what() );
+        }
 
-        if ( not schedule_.empty() ) {
-            if ( ms < schedule_.back() ) {
+        if ( not schedule_ns_.empty() ) {
+            if ( ns < schedule_ns_.back() ) {
                 throw runtime_error( filename + ": timestamps must be monotonically nondecreasing" );
             }
         }
 
-        schedule_.emplace_back( ms );
+        schedule_ns_.emplace_back( ns );
     }
 
-    if ( schedule_.empty() ) {
+    if ( schedule_ns_.empty() ) {
         throw runtime_error( filename + ": no valid timestamps found" );
     }
 
-    if ( schedule_.back() == 0 ) {
+    if ( schedule_ns_.back() == 0 ) {
         throw runtime_error( filename + ": trace must last for a nonzero amount of time" );
     }
 
@@ -73,8 +79,8 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
         *log_ << "# mahimahi mm-link (" << link_name << ") [" << filename << "] > " << logfile << endl;
         *log_ << "# command line: " << command_line << endl;
         *log_ << "# queue: " << packet_queue_->to_string() << endl;
-        *log_ << "# init timestamp: " << initial_timestamp() << endl;
-        *log_ << "# base timestamp: " << base_timestamp_ << endl;
+        *log_ << "# init timestamp: " << ns_to_ms_string( initial_realtime_ns() ) << endl;
+        *log_ << "# base timestamp: " << ns_to_ms_string( base_timestamp_ns_ ) << endl;
         const char * prefix = getenv( "MAHIMAHI_SHELL_PREFIX" );
         if ( prefix ) {
             *log_ << "# mahimahi config: " << prefix << endl;
@@ -95,10 +101,11 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
     }
 
     if ( graph_delay ) {
+        /* delays are recorded in microseconds and displayed in milliseconds */
         delay_graph_.reset( new BinnedLiveGraph( link_name + " delay [" + filename + "]",
                                                  { make_tuple( 0.0, 0.25, 0.0, 1.0, false ) },
                                                  "queueing delay (ms)",
-                                                 1, false, 250 * NS_PER_MS,
+                                                 0.001, false, 250 * NS_PER_MS,
                                                  [] ( int & x ) { x = -1; } ) );
     }
 }
@@ -107,7 +114,7 @@ void LinkQueue::record_arrival( const uint64_t arrival_time, const size_t pkt_si
 {
     /* log it */
     if ( log_ ) {
-        *log_ << arrival_time << " + " << pkt_size << endl;
+        *log_ << ns_to_ms_string( arrival_time ) << " + " << pkt_size << endl;
     }
 
     /* meter it */
@@ -120,7 +127,7 @@ void LinkQueue::record_drop( const uint64_t time, const size_t pkts_dropped, con
 {
     /* log it */
     if ( log_ ) {
-        *log_ << time << " d " << pkts_dropped << " " << bytes_dropped << endl;
+        *log_ << ns_to_ms_string( time ) << " d " << pkts_dropped << " " << bytes_dropped << endl;
     }
 }
 
@@ -128,7 +135,7 @@ void LinkQueue::record_departure_opportunity( void )
 {
     /* log the delivery opportunity */
     if ( log_ ) {
-        *log_ << next_delivery_time() << " # " << PACKET_SIZE << endl;
+        *log_ << ns_to_ms_string( next_delivery_time() ) << " # " << PACKET_SIZE << endl;
     }
 
     /* meter the delivery opportunity */
@@ -139,10 +146,12 @@ void LinkQueue::record_departure_opportunity( void )
 
 void LinkQueue::record_departure( const uint64_t departure_time, const QueuedPacket & packet )
 {
+    const uint64_t delay = departure_time - packet.arrival_time_ns;
+
     /* log the delivery */
     if ( log_ ) {
-        *log_ << departure_time << " - " << packet.contents.size()
-              << " " << departure_time - packet.arrival_time << endl;
+        *log_ << ns_to_ms_string( departure_time ) << " - " << packet.contents.size()
+              << " " << ns_to_ms_string( delay ) << endl;
     }
 
     /* meter the delivery */
@@ -151,13 +160,13 @@ void LinkQueue::record_departure( const uint64_t departure_time, const QueuedPac
     }
 
     if ( delay_graph_ ) {
-        delay_graph_->set_max_value_now( 0, departure_time - packet.arrival_time );
+        delay_graph_->set_max_value_now( 0, delay / 1000 );
     }    
 }
 
 void LinkQueue::read_packet( const string & contents )
 {
-    const uint64_t now = timestamp();
+    const uint64_t now = timestamp_ns();
 
     if ( contents.size() > PACKET_SIZE ) {
         throw runtime_error( "packet size is greater than maximum" );
@@ -187,7 +196,7 @@ uint64_t LinkQueue::next_delivery_time( void ) const
     if ( finished_ ) {
         return -1;
     } else {
-        return schedule_.at( next_delivery_ ) + base_timestamp_;
+        return schedule_ns_.at( next_delivery_ ) + base_timestamp_ns_;
     }
 }
 
@@ -195,12 +204,12 @@ void LinkQueue::use_a_delivery_opportunity( void )
 {
     record_departure_opportunity();
 
-    next_delivery_ = (next_delivery_ + 1) % schedule_.size();
+    next_delivery_ = (next_delivery_ + 1) % schedule_ns_.size();
 
     /* wraparound */
     if ( next_delivery_ == 0 ) {
         if ( repeat_ ) {
-            base_timestamp_ += schedule_.back();
+            base_timestamp_ns_ += schedule_ns_.back();
         } else {
             finished_ = true;
         }
@@ -209,7 +218,7 @@ void LinkQueue::use_a_delivery_opportunity( void )
 
 /* emulate the link up to the given timestamp */
 /* this function should be called before enqueueing any packets and before
-   calculating the wait_time until the next event */
+   calculating the time of the next event */
 void LinkQueue::rationalize( const uint64_t now )
 {
     while ( next_delivery_time() <= now ) {
@@ -228,7 +237,7 @@ void LinkQueue::rationalize( const uint64_t now )
                 packet_in_transit_bytes_left_ = packet_in_transit_.contents.size();
             }
 
-            assert( packet_in_transit_.arrival_time <= this_delivery_time );
+            assert( packet_in_transit_.arrival_time_ns <= this_delivery_time );
             assert( packet_in_transit_bytes_left_ <= PACKET_SIZE );
             assert( packet_in_transit_bytes_left_ > 0 );
             assert( packet_in_transit_bytes_left_ <= packet_in_transit_.contents.size() );
@@ -260,17 +269,11 @@ void LinkQueue::write_packets( FileDescriptor & fd )
     }
 }
 
-unsigned int LinkQueue::wait_time( void )
+uint64_t LinkQueue::next_event_time_ns( void )
 {
-    const auto now = timestamp();
+    rationalize( timestamp_ns() );
 
-    rationalize( now );
-
-    if ( next_delivery_time() <= now ) {
-        return 0;
-    } else {
-        return next_delivery_time() - now;
-    }
+    return next_delivery_time();
 }
 
 bool LinkQueue::pending_output( void ) const

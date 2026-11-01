@@ -19,8 +19,8 @@ private:
     const static unsigned int PACKET_SIZE = 1504; /* default max TUN payload size */
 
     unsigned int next_delivery_;
-    std::vector<uint64_t> schedule_;
-    uint64_t base_timestamp_;
+    std::vector<uint64_t> schedule_ns_;
+    uint64_t base_timestamp_ns_;
 
     std::unique_ptr<AbstractPacketQueue> packet_queue_;
     QueuedPacket packet_in_transit_;
@@ -56,7 +56,7 @@ public:
 
     void write_packets( FileDescriptor & fd );
 
-    unsigned int wait_time( void );
+    uint64_t next_event_time_ns( void );
 
     bool pending_output( void ) const;
 

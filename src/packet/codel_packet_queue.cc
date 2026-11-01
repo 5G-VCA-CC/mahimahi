@@ -37,7 +37,7 @@ dodequeue_result CODELPacketQueue::dodequeue ( uint64_t now )
     return r;
   }
 
-  sojourn_time = now - r.p.arrival_time;
+  sojourn_time = now - r.p.arrival_time_ns / NS_PER_MS;
   if ( sojourn_time < target_ || size_bytes() <= PACKET_SIZE ) {
     first_above_time_ = 0;
   }
@@ -61,7 +61,7 @@ uint64_t CODELPacketQueue::control_law ( uint64_t t, uint32_t count )
 
 QueuedPacket CODELPacketQueue::dequeue( void )
 {   
-  const uint64_t now = timestamp();
+  const uint64_t now = timestamp_ns() / NS_PER_MS;
   dodequeue_result r = dodequeue( now );
   uint32_t delta;
     
