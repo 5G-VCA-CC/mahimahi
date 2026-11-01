@@ -27,7 +27,7 @@ void usage_error( const string & program_name )
     cerr << "          QUEUE_TYPE = infinite | droptail | drophead | codel | pie" << endl;
     cerr << "          QUEUE_ARGS = \"NAME=NUMBER[, NAME2=NUMBER2, ...]\"" << endl;
     cerr << "              (with NAME = bytes | packets | target | interval | qdelay_ref | max_burst)" << endl;
-    cerr << "                  target, interval, qdelay_ref, max_burst are in milli-second" << endl << endl;
+    cerr << "                  target, interval, qdelay_ref, max_burst are in milli-second (fractional allowed)" << endl << endl;
 
     throw runtime_error( "invalid arguments" );
 }

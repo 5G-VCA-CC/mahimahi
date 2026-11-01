@@ -10,11 +10,11 @@ using namespace std;
 
 PIEPacketQueue::PIEPacketQueue( const string & args )
   : DroppingPacketQueue(args),
-    qdelay_ref_ ( get_arg( args, "qdelay_ref" ) ),
-    max_burst_ ( get_arg( args, "max_burst" ) ),
+    qdelay_ref_ ( get_ms_arg_ns( args, "qdelay_ref" ) ),
+    max_burst_ ( get_ms_arg_ns( args, "max_burst" ) ),
     alpha_ ( 0.125 ),
     beta_ ( 1.25 ),
-    t_update_ ( 30 ),
+    t_update_ ( 30 * NS_PER_MS ),
     dq_threshold_ ( 16384 ),
     drop_prob_ ( 0.0 ),
     burst_allowance_ ( 0 ),
@@ -25,7 +25,7 @@ PIEPacketQueue::PIEPacketQueue( const string & args )
     avg_dq_rate_ ( 0 ),
     uniform_generator_ ( 0.0, 1.0 ),
     prng_( random_device()() ),
-    last_update_( timestamp() )
+    last_update_( timestamp_ns() )
 {
   if ( qdelay_ref_ == 0 || max_burst_ == 0 ) {
     throw runtime_error( "PIE AQM queue must have qdelay_ref and max_burst parameters" );
@@ -79,7 +79,7 @@ bool PIEPacketQueue::drop_early ()
 QueuedPacket PIEPacketQueue::dequeue( void )
 {
   QueuedPacket ret = DroppingPacketQueue::dequeue();
-  uint32_t now = timestamp();
+  uint64_t now = timestamp_ns();
 
   if ( size_bytes() >= dq_threshold_ && dq_count_ == DQ_COUNT_INVALID ) {
     dq_tstamp_ = now;
@@ -90,15 +90,15 @@ QueuedPacket PIEPacketQueue::dequeue( void )
     dq_count_ += ret.contents.size();
 
     if ( dq_count_ > dq_threshold_ ) {
-      uint32_t dtime = now - dq_tstamp_;
+      uint64_t dtime = now - dq_tstamp_;
 
       if ( dtime > 0 ) {
-	uint32_t rate_sample = dq_count_ / dtime;
+	double rate_sample = double( dq_count_ ) / dtime;
 	if ( avg_dq_rate_ == 0 ) 
 	  avg_dq_rate_ = rate_sample;
 	else
-	  avg_dq_rate_ = ( avg_dq_rate_ - (avg_dq_rate_ >> 3 )) +
-		     (rate_sample >> 3);
+	  avg_dq_rate_ = ( avg_dq_rate_ - (avg_dq_rate_ / 8 )) +
+		     (rate_sample / 8);
                 
 	if ( size_bytes() < dq_threshold_ ) {
 	  dq_count_ = DQ_COUNT_INVALID;
@@ -125,7 +125,7 @@ QueuedPacket PIEPacketQueue::dequeue( void )
 
 void PIEPacketQueue::calculate_drop_prob( void )
 {
-  uint64_t now = timestamp();
+  uint64_t now = timestamp_ns();
 
   //We can't have a fork inside the mahimahi shell so we simulate
   //the periodic drop probability calculation here by repeating it for the
@@ -138,7 +138,7 @@ void PIEPacketQueue::calculate_drop_prob( void )
     qdelay_old_ = current_qdelay_;
 
     if ( avg_dq_rate_ > 0 ) 
-      current_qdelay_ = size_bytes() / avg_dq_rate_;
+      current_qdelay_ = uint64_t( size_bytes() / avg_dq_rate_ );
     else
       current_qdelay_ = 0;
 
@@ -146,8 +146,11 @@ void PIEPacketQueue::calculate_drop_prob( void )
       update_prob = false;
     }
 
-    double p = (alpha_ * (int)(current_qdelay_ - qdelay_ref_) ) +
-      ( beta_ * (int)(current_qdelay_ - qdelay_old_) );
+    const double qdelay_error_ms = double( int64_t( current_qdelay_ - qdelay_ref_ ) ) / NS_PER_MS;
+    const double qdelay_trend_ms = double( int64_t( current_qdelay_ - qdelay_old_ ) ) / NS_PER_MS;
+
+    double p = (alpha_ * qdelay_error_ms ) +
+      ( beta_ * qdelay_trend_ms );
 
     if ( drop_prob_ < 0.01 ) {
       p /= 128;
@@ -172,7 +175,7 @@ void PIEPacketQueue::calculate_drop_prob( void )
       drop_prob_ *= 0.98;
     }
         
-    burst_allowance_ = max( 0, (int) burst_allowance_ -  (int)t_update_ );
+    burst_allowance_ = ( burst_allowance_ > t_update_ ) ? burst_allowance_ - t_update_ : 0;
     last_update_ += t_update_;
 
     if ( ( drop_prob_ == 0 )
