@@ -90,16 +90,16 @@ LinkQueue::LinkQueue( const string & link_name, const string & filename, const s
                                                       "throughput (Mbps)",
                                                       8.0 / 1000000.0,
                                                       true,
-                                                      500,
-                                                      [] ( int, int & x ) { x = 0; } ) );
+                                                      500 * NS_PER_MS,
+                                                      [] ( int & x ) { x = 0; } ) );
     }
 
     if ( graph_delay ) {
         delay_graph_.reset( new BinnedLiveGraph( link_name + " delay [" + filename + "]",
                                                  { make_tuple( 0.0, 0.25, 0.0, 1.0, false ) },
                                                  "queueing delay (ms)",
-                                                 1, false, 250,
-                                                 [] ( int, int & x ) { x = -1; } ) );
+                                                 1, false, 250 * NS_PER_MS,
+                                                 [] ( int & x ) { x = -1; } ) );
     }
 }
 
