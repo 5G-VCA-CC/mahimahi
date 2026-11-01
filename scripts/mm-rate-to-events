@@ -7,16 +7,35 @@
 #
 # The latter is the format that mm-link expects.
 #
+# By default, timestamps are integer milliseconds and every packet that
+# becomes deliverable during a millisecond is delivered at its start.
+# With --fractional, bits accrue uniformly over each millisecond and each
+# packet is delivered at the fractional millisecond (nanosecond resolution)
+# when enough bits have accrued for it.
+#
 # KJW 7/28/2017
 
 use strict;
 use warnings;
+use Getopt::Long;
 use Scalar::Util qw[looks_like_number];
 use POSIX qw[ceil];
+
+my $fractional = 0;
+GetOptions( 'fractional' => \$fractional )
+  or die qq{Usage: $0 [--fractional] [filename]\n};
 
 my $time = 0;
 my $reserve_bits = 0;
 my $PACKET_LENGTH = 12000; # bits
+
+# milliseconds with nanosecond resolution, without trailing zeros
+sub format_ms {
+  my $ms = sprintf q{%.6f}, $_[0];
+  $ms =~ s/(\.\d*?)0+$/$1/;
+  $ms =~ s/\.$//;
+  return $ms;
+}
 
 # input trace gives a number of kilobits that can be delivered each millisecond
 while (my $kilobits_this_millisecond = <>) {
@@ -25,12 +44,23 @@ while (my $kilobits_this_millisecond = <>) {
     unless looks_like_number $kilobits_this_millisecond;
 
   # add current rate to "reserve"
-  $reserve_bits += 1000 * $kilobits_this_millisecond;
+  my $bits_this_millisecond = 1000 * $kilobits_this_millisecond;
+  my $reserve_at_start = $reserve_bits;
+  $reserve_bits += $bits_this_millisecond;
 
-  # if reserve has enough bits for a packet, deliver it now
+  # if reserve has enough bits for a packet, deliver it
   # output trace gives timestamps of packet delivery occurrences
+  my $packets_this_millisecond = 0;
   while ( $reserve_bits >= $PACKET_LENGTH ) {
-    print qq{$time\n};
+    $packets_this_millisecond++;
+    if ( $fractional ) {
+      # deliver at the instant the reserve holds enough bits for this packet
+      my $offset = ( $packets_this_millisecond * $PACKET_LENGTH - $reserve_at_start )
+        / $bits_this_millisecond;
+      print format_ms( $time + $offset ), qq{\n};
+    } else {
+      print qq{$time\n};
+    }
     $reserve_bits -= $PACKET_LENGTH;
   }
 
