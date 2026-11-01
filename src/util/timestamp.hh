@@ -25,7 +25,4 @@ uint64_t ms_string_to_ns( const std::string & str );
 /* format nanoseconds as milliseconds with nanosecond resolution (e.g. "12.000250") */
 std::string ns_to_ms_string( const uint64_t ns );
 
-uint64_t timestamp( void );
-uint64_t initial_timestamp( void );
-
 #endif /* TIMESTAMP_HH */
