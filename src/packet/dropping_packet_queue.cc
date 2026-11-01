@@ -5,6 +5,7 @@
 #include "dropping_packet_queue.hh"
 #include "exception.hh"
 #include "ezio.hh"
+#include "timestamp.hh"
 
 using namespace std;
 
@@ -101,9 +102,24 @@ string DroppingPacketQueue::to_string( void ) const
 
 unsigned int DroppingPacketQueue::get_arg( const string & args, const string & name )
 {
+    const string value = get_arg_string( args, name, "0123456789" );
+
+    return value.empty() ? 0 /* default value */ : myatoi( value );
+}
+
+uint64_t DroppingPacketQueue::get_ms_arg_ns( const string & args, const string & name )
+{
+    const string value = get_arg_string( args, name, "0123456789." );
+
+    return value.empty() ? 0 /* default value */ : ms_string_to_ns( value );
+}
+
+string DroppingPacketQueue::get_arg_string( const string & args, const string & name,
+                                            const string & value_chars )
+{
     auto offset = args.find( name );
     if ( offset == string::npos ) {
-        return 0; /* default value */
+        return ""; /* not present */
     } else {
         /* extract the value */
 
@@ -118,15 +134,15 @@ unsigned int DroppingPacketQueue::get_arg( const string & args, const string & n
         /* advance by length of "=" */
         offset++;
 
-        /* find the first non-digit character */
-        auto offset2 = args.substr( offset ).find_first_not_of( "0123456789" );
+        /* find the first character that can't be part of the value */
+        auto offset2 = args.substr( offset ).find_first_not_of( value_chars );
 
-        auto digit_string = args.substr( offset ).substr( 0, offset2 );
+        auto value_string = args.substr( offset ).substr( 0, offset2 );
 
-        if ( digit_string.empty() ) {
+        if ( value_string.empty() ) {
             throw runtime_error( "could not parse queue arguments: " + args );
         }
 
-        return myatoi( digit_string );
+        return value_string;
     }
 }

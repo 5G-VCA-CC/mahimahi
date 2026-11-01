@@ -5,6 +5,7 @@
 
 #include <queue>
 #include <cassert>
+#include <cstdint>
 
 #include "abstract_packet_queue.hh"
 #include "exception.hh"
@@ -17,6 +18,9 @@ private:
     std::queue<QueuedPacket> internal_queue_ {};
 
     virtual const std::string & type( void ) const = 0;
+
+    static std::string get_arg_string( const std::string & args, const std::string & name,
+                                       const std::string & value_chars );
 
 protected:
     const unsigned int packet_limit_;
@@ -42,6 +46,9 @@ public:
     std::string to_string( void ) const override;
 
     static unsigned int get_arg( const std::string & args, const std::string & name );
+
+    /* argument given in (possibly fractional) milliseconds, returned in nanoseconds */
+    static uint64_t get_ms_arg_ns( const std::string & args, const std::string & name );
 
     unsigned int size_bytes( void ) const override;
     unsigned int size_packets( void ) const override;
