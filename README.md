@@ -40,8 +40,8 @@ Arguments are a comma-separated list of `NAME=VALUE` pairs. All of the following
 | `alpha`             | PI integral gain.                                                   | `0.16`          |
 | `beta`              | PI proportional gain.                                               | `3.2`           |
 | `sched`             | Dual-queue scheduler type (`0` = WRR).                              | `0` (WRR)       |
-| `l4s_max_threshold` | L4S (L-queue) marking threshold (ms).                               | `1`             |
-| `l4s_min_threshold` | L4S ramp lower threshold (ms). If `0`, use a step function.         | `0` (step)      |
+| `l4s_max_threshold` | L4S (L-queue) marking threshold (ms, fractional allowed).           | `1`             |
+| `l4s_min_threshold` | L4S ramp lower threshold (ms, fractional allowed). If `0`, use a step function. | `0` (step)      |
 | `l4s_min_len`       | Minimum L-queue length (packets) before L4S marking.                | `1`             |
 
 

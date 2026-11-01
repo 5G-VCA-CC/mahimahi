@@ -45,6 +45,8 @@ public:
 bool has_arg( const std::string & args, const std::string & name );
 unsigned int get_arg( const std::string & args, const std::string & name );
 double get_arg_double( const std::string & args, const std::string & name );
+/* argument given in (possibly fractional) milliseconds, returned in nanoseconds */
+uint64_t get_ms_arg_ns( const std::string & args, const std::string & name );
 void print_ipv4_header( QueuedPacket & p ); 
 unsigned short calculate_ip_checksum(unsigned short *addr, unsigned int count); 
 

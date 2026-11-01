@@ -150,6 +150,20 @@ double get_arg_double( const string & args, const string & name )
     return myatof( val );
 }
 
+uint64_t get_ms_arg_ns( const string & args, const string & name )
+{
+    const string val = get_arg_value( args, name );
+    if ( val.empty() ) {
+        return 0; /* default when not provided */
+    }
+
+    try {
+        return ms_string_to_ns( val );
+    } catch ( const exception & e ) {
+        throw runtime_error( name + ": " + e.what() );
+    }
+}
+
 void print_ipv4_header( QueuedPacket & p ) 
 {   
     struct iphdr *ip_header = (struct iphdr *) &p.contents[4];

@@ -17,10 +17,10 @@ class L4SPacketQueue : public AbstractDualPI2PacketQueue
 private:
     /* L4S native AQM parameters */ 
     
-    uint64_t max_delay_thresh_ms_;
+    uint64_t max_delay_thresh_ns_;
 
     // Min threshold if using the range method
-    uint64_t min_delay_thresh_ms_;
+    uint64_t min_delay_thresh_ns_;
 
     // Is the marking probability a step or a range function ?
     bool step_;
